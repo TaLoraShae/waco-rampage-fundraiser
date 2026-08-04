@@ -17,7 +17,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <div className="min-h-screen flex bg-rampage-gray-light">
       <aside className="w-60 shrink-0 bg-rampage-charcoal text-white flex flex-col hidden md:flex">
         <div className="px-5 py-6 border-b border-white/10">
-          <p className="text-xs uppercase tracking-widest text-rampage-gold font-semibold">{brand.shortName}</p>
+          <p className="text-xs uppercase tracking-widest text-rampage-purple-light font-semibold">{brand.shortName}</p>
           <p className="font-display text-lg">Admin Dashboard</p>
         </div>
         <nav className="flex-1 px-3 py-4 space-y-1 text-sm">

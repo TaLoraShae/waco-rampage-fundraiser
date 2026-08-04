@@ -7,7 +7,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
     <div className="flex flex-col min-h-screen">
       <PrototypeBanner />
       <SiteHeader />
-      <main className="flex-1 bg-rampage-gray-light">{children}</main>
+      <main className="flex-1 bg-rampage-black">{children}</main>
       <SiteFooter />
     </div>
   );

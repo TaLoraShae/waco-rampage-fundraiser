@@ -36,12 +36,12 @@ export default function CountdownTimer({ endDate }: { endDate: string }) {
       {units.map((u) => (
         <div
           key={u.label}
-          className="flex flex-col items-center justify-center bg-white/10 border border-white/15 rounded-xl w-16 sm:w-20 py-2 sm:py-3"
+          className="flex flex-col items-center justify-center bg-black/60 metal-border rounded-lg w-16 sm:w-20 py-2 sm:py-3"
         >
-          <span className="font-display text-2xl sm:text-3xl text-white tabular-nums">
+          <span className="font-display text-2xl sm:text-3xl text-rampage-purple-light tabular-nums">
             {String(u.value).padStart(2, "0")}
           </span>
-          <span className="text-[10px] sm:text-xs uppercase tracking-wide text-white/60">{u.label}</span>
+          <span className="text-[10px] sm:text-xs uppercase tracking-wide text-rampage-gray">{u.label}</span>
         </div>
       ))}
     </div>

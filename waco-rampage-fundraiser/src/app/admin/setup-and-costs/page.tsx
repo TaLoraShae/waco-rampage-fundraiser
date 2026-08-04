@@ -13,7 +13,7 @@ const SECTIONS = [
   },
   {
     title: "What Supabase would do",
-    body: "Supabase would replace the local JSON file with a real hosted database (plus optional file storage for photos and authentication for admin logins), so data persists reliably in production and multiple people can manage it at once.",
+    body: "Supabase would replace the browser's local storage with a real hosted database (plus optional file storage for photos and authentication for admin logins), so data is shared across devices/browsers and persists reliably in production.",
   },
   {
     title: "What Vercel does",
@@ -92,7 +92,7 @@ export default function SetupAndCostsPage() {
           <li>Get organization approval and identify the authorized account owner</li>
           <li>Create and verify a real Stripe account connected to an approved bank account</li>
           <li>Add real Stripe keys and create the Stripe webhook, then set PAYMENT_MODE=stripe</li>
-          <li>Migrate from the local JSON data store to Supabase (or another real database)</li>
+          <li>Migrate from browser-only storage to Supabase (or another shared, real database)</li>
           <li>Replace the prototype demo login with real administrator authentication</li>
           <li>Add a complete privacy policy and collect photo permission for all players</li>
           <li>Remove the prototype banner and demo login before the public launch</li>

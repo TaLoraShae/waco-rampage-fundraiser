@@ -15,11 +15,9 @@ connected to real money.
 - [ ] Review admin reports and CSV export
 - [ ] Approve or edit the fundraiser wording (`src/lib/config.ts`, `/admin/settings`)
 
-Reset test data at any time with:
-
-```bash
-npm run reset-data
-```
+Reset test data any time from the admin dashboard: open **Admin →
+Dashboard** and click **Reset All Prototype Data**, or clear this
+site's data in your browser settings.
 
 ---
 
@@ -31,7 +29,7 @@ Complete all of these before accepting a single real donation.
 - [ ] Identify the authorized account owner (Stripe account holder)
 - [ ] Confirm the approved bank account for payouts
 - [ ] Create and verify a real Stripe account
-- [ ] Create a Supabase project and migrate off the local JSON store
+- [ ] Create a Supabase project and migrate off browser-only storage
 - [ ] Set up real administrator authentication (replace the demo login)
 - [ ] Add a complete privacy policy
 - [ ] Collect photo permission for every player pictured

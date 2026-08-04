@@ -33,13 +33,12 @@ review only** — see `docs/CHECKLISTS.md` before a real launch.
 
 ## Resetting sample data
 
-The prototype stores its data in `data/db.json`, generated
-automatically from the seed data the first time you run the app. To
-wipe it back to the original sample players/donations/sponsors:
-
-```bash
-npm run reset-data
-```
+The prototype stores its data in your **browser's local storage**
+(not a server file), seeded automatically from `src/lib/seedData.ts`
+the first time the app loads. To wipe it back to the original sample
+players/donations/sponsors, open the admin dashboard and click
+**Reset All Prototype Data** — or just clear this site's data in your
+browser settings.
 
 ## What's included
 
@@ -69,8 +68,9 @@ npm run reset-data
   `src/app/api/webhooks/stripe/route.ts` are fully written but stay
   inactive until you set `PAYMENT_MODE=stripe` and add real keys.
 - **Database-ready architecture** — every page/component reads and
-  writes through `src/lib/db.ts`. Swapping the local JSON file for
-  Supabase means rewriting that one file, not the UI. See
+  writes through `src/lib/store.tsx` (a browser-based data store — see
+  "Resetting sample data" above) or `src/lib/selectors.ts` for reads.
+  Swapping in Supabase means rewriting that data layer, not the UI. See
   `docs/SUPABASE_SCHEMA.md`.
 
 ## Editing branding and wording
@@ -103,8 +103,9 @@ src/
   components/            Shared UI components
     admin/                Admin-only form components
   lib/
-    db.ts                 The ONLY file that touches storage — the database abstraction layer
-    seedData.ts            Sample players/donations/sponsors
+    store.tsx              Client-side data store (React Context + localStorage) — the ONLY place data is mutated
+    selectors.ts             Pure read helpers (getPlayers, getLeaderboard, etc.) operating on store state
+    seedData.ts                Sample players/donations/sponsors, used to seed the store
     types.ts                Shared TypeScript types (mirrors the proposed Supabase schema)
     config.ts                Branding configuration
     fees.ts                    Stripe fee estimator
@@ -113,16 +114,12 @@ src/
     qrcode.ts                     QR code generation (no external service)
     auth.ts                        Prototype admin auth
   middleware.ts            Protects /admin routes
-data/
-  db.json                 Local "database" file (auto-generated, gitignore this in real use)
 docs/
   SUPABASE_SCHEMA.md / .sql   Proposed tables, SQL, RLS, storage, auth plan, migration steps
   STRIPE_SETUP.md               Exact steps to connect a real Stripe account
   DEPLOYMENT.md                   GitHub + Vercel + custom domain instructions
   CHECKLISTS.md                    Prototype review checklist + production launch checklist
   SIMULATED_VS_REAL.md               What's fake right now vs. what's already real
-scripts/
-  reset-data.js             `npm run reset-data`
 ```
 
 ## Deploying
@@ -134,7 +131,7 @@ and review the prototype.
 ## Going live with real payments later
 
 1. `docs/STRIPE_SETUP.md` — connect a real Stripe account
-2. `docs/SUPABASE_SCHEMA.md` — migrate off the local JSON file
+2. `docs/SUPABASE_SCHEMA.md` — migrate off browser-only storage
 3. `docs/CHECKLISTS.md` — full production launch checklist
 4. Set `PAYMENT_MODE=stripe` and redeploy — the prototype banner
    disappears automatically and the real Stripe Checkout flow takes
@@ -144,5 +141,5 @@ and review the prototype.
 
 Next.js 14 (App Router) · TypeScript · Tailwind CSS · `qrcode` for QR
 generation · `uuid` for IDs · `stripe` SDK (ready, inactive until
-configured) · local JSON file storage with a documented reset process
-(swap-ready for Supabase).
+configured) · browser-based (localStorage) storage with a documented
+reset process (swap-ready for Supabase).

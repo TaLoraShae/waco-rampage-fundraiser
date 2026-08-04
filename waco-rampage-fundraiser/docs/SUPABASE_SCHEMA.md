@@ -1,10 +1,11 @@
 # Proposed Supabase Schema
 
 This is the proposed database schema for migrating off the prototype's
-local JSON file storage. It mirrors the shape already used in
-`src/lib/types.ts`, so the migration mainly means rewriting
-`src/lib/db.ts` to call Supabase instead of the filesystem — no page or
-component needs to change.
+browser-based (localStorage) storage. It mirrors the shape already
+used in `src/lib/types.ts`, so the migration mainly means rewriting
+`src/lib/store.tsx` (and/or replacing it with server-fetched data plus
+Supabase client calls) instead of the filesystem — no page or
+component needs to change its JSX, only where the data comes from.
 
 Run this in the Supabase SQL editor after creating a new project.
 
@@ -215,18 +216,24 @@ Create two buckets in Supabase Storage:
 4. Replace `src/lib/auth.ts` and `src/middleware.ts` with Supabase Auth's
    session helpers (`@supabase/ssr`), and remove the demo credential check.
 
-## Migration steps from mock data
+## Migration steps from browser storage
 
 1. Create the Supabase project and run the SQL above.
 2. Add `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and
    `SUPABASE_SERVICE_ROLE_KEY` to your environment.
 3. Install `@supabase/supabase-js` (and `@supabase/ssr` for auth).
-4. Rewrite `src/lib/db.ts` function-by-function to call Supabase instead
-   of reading/writing `data/db.json`. Keep every exported function name
-   and signature the same — pages and components should need zero changes.
+4. Replace `src/lib/store.tsx`'s localStorage read/writes with Supabase
+   queries — either keep a thin client-side context that fetches from
+   Supabase on mount and calls Supabase on each mutation, or convert
+   the data-dependent pages to Server Components that fetch via
+   Supabase directly and use Server Actions for mutations (more robust
+   for a real multi-admin deployment). Keep the same field names from
+   `src/lib/types.ts` and the same selector function signatures in
+   `src/lib/selectors.ts` so page components don't need rewrites.
 5. Run the seed script below once to load your real roster.
-6. Remove `data/db.json` from the project (or leave it — it will simply
-   be unused once `db.ts` no longer reads it).
+6. `src/lib/seedData.ts` (used only for the prototype's initial/reset
+   state) can be deleted or left in place — it's unused once real data
+   comes from Supabase.
 
 ## Seed script for the sample players (adapt for your real roster)
 

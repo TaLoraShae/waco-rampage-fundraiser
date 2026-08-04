@@ -35,19 +35,23 @@ git push -u origin main
 
 4. Click **Deploy**.
 
-### Important: storage on Vercel
+### Storage on Vercel — already handled
 
-This prototype's storage layer (`src/lib/db.ts`) writes to a local
-JSON file. That works well in local development (`npm run dev`) and on
-a traditional always-on server, but **Vercel's filesystem is read-only
-in production**, so admin changes won't persist between requests once
-deployed there.
+This prototype stores its data (players, donations, sponsors,
+settings) in the **browser** via `localStorage` (see
+`src/lib/store.tsx`), not on the server filesystem. That's
+intentional: Vercel's serverless functions have a read-only,
+ephemeral filesystem, so a server-side file write would disappear
+between requests. Because nothing here writes to disk, the site works
+correctly out of the box once deployed to Vercel — no extra
+configuration needed.
 
-For a deployed *review* environment, this is usually fine — the site
-still fully renders and the mock checkout flow still works within a
-single request lifecycle. For a deployed environment where you want
-admin edits to actually persist, migrate to Supabase first (see
-`docs/SUPABASE_SCHEMA.md`) — no UI changes are required, only `db.ts`.
+Keep in mind this also means the prototype's data is **per
+browser/device** — donations made on one visitor's phone won't show up
+in the admin dashboard on your laptop. That's fine for reviewing and
+testing the prototype. For a real shared, multi-device dataset, migrate
+to Supabase first (see `docs/SUPABASE_SCHEMA.md`) — only
+`src/lib/store.tsx` needs to change; no page or component does.
 
 ## 3. Connect a custom domain
 

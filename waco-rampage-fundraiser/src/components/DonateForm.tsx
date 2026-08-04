@@ -35,6 +35,9 @@ export default function DonateForm({
     }
   }
 
+  const inputCls =
+    "w-full rounded-lg border border-white/15 bg-black/40 px-4 py-3 text-sm text-white placeholder:text-rampage-gray focus:outline-none focus:ring-2 focus:ring-rampage-purple-light";
+
   return (
     <form
       action={`/checkout/${slug}`}
@@ -44,7 +47,7 @@ export default function DonateForm({
       aria-describedby={error ? "donate-error" : undefined}
     >
       <div>
-        <span className="block text-sm font-semibold text-rampage-charcoal mb-2">Choose an amount</span>
+        <span className="block text-sm font-semibold text-white mb-2">Choose an amount</span>
         <div className="grid grid-cols-4 gap-2">
           {suggestedAmountsCents.map((amt) => (
             <button
@@ -52,10 +55,10 @@ export default function DonateForm({
               key={amt}
               onClick={() => setSelected(amt)}
               aria-pressed={selected === amt}
-              className={`rounded-xl border-2 py-3 text-sm font-bold transition focus-ring ${
+              className={`rounded-lg border-2 py-3 text-sm font-bold transition focus-ring ${
                 selected === amt
-                  ? "border-rampage-purple bg-rampage-purple text-white"
-                  : "border-black/10 text-rampage-charcoal hover:border-rampage-purple/50"
+                  ? "border-rampage-purple-light bg-rampage-purple text-white"
+                  : "border-white/15 text-white hover:border-rampage-purple-light/60"
               }`}
             >
               {formatCents(amt).replace(".00", "")}
@@ -65,10 +68,10 @@ export default function DonateForm({
             type="button"
             onClick={() => setSelected("custom")}
             aria-pressed={selected === "custom"}
-            className={`rounded-xl border-2 py-3 text-sm font-bold transition focus-ring ${
+            className={`rounded-lg border-2 py-3 text-sm font-bold transition focus-ring ${
               selected === "custom"
-                ? "border-rampage-purple bg-rampage-purple text-white"
-                : "border-black/10 text-rampage-charcoal hover:border-rampage-purple/50"
+                ? "border-rampage-purple-light bg-rampage-purple text-white"
+                : "border-white/15 text-white hover:border-rampage-purple-light/60"
             }`}
           >
             Other
@@ -91,7 +94,7 @@ export default function DonateForm({
                 value={customAmount}
                 onChange={(e) => setCustomAmount(e.target.value)}
                 placeholder="Enter amount"
-                className="w-full rounded-xl border border-black/10 pl-8 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-rampage-purple"
+                className={`${inputCls} pl-8`}
               />
             </div>
           </div>
@@ -101,7 +104,7 @@ export default function DonateForm({
       <input type="hidden" name="amountCents" value={amountCents || ""} />
 
       <div>
-        <label htmlFor="donorName" className="block text-sm font-semibold text-rampage-charcoal mb-1">
+        <label htmlFor="donorName" className="block text-sm font-semibold text-white mb-1">
           Your name {anonymous && <span className="text-rampage-gray font-normal">(hidden — donating anonymously)</span>}
         </label>
         <input
@@ -110,58 +113,46 @@ export default function DonateForm({
           type="text"
           placeholder="Optional display name"
           disabled={anonymous}
-          className="w-full rounded-xl border border-black/10 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-rampage-purple disabled:bg-black/5"
+          className={`${inputCls} disabled:opacity-40`}
         />
       </div>
 
       <div>
-        <label htmlFor="donorEmail" className="block text-sm font-semibold text-rampage-charcoal mb-1">
+        <label htmlFor="donorEmail" className="block text-sm font-semibold text-white mb-1">
           Email (for your receipt — never shown publicly)
         </label>
-        <input
-          id="donorEmail"
-          name="donorEmail"
-          type="email"
-          placeholder="you@example.com"
-          className="w-full rounded-xl border border-black/10 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-rampage-purple"
-        />
+        <input id="donorEmail" name="donorEmail" type="email" placeholder="you@example.com" className={inputCls} />
       </div>
 
       <div>
-        <label htmlFor="donorMessage" className="block text-sm font-semibold text-rampage-charcoal mb-1">
+        <label htmlFor="donorMessage" className="block text-sm font-semibold text-white mb-1">
           Message of support (optional)
         </label>
-        <textarea
-          id="donorMessage"
-          name="donorMessage"
-          rows={2}
-          placeholder="Go get 'em!"
-          className="w-full rounded-xl border border-black/10 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-rampage-purple"
-        />
+        <textarea id="donorMessage" name="donorMessage" rows={2} placeholder="Go get 'em!" className={inputCls} />
       </div>
 
       {anonymousAllowed && (
-        <label className="flex items-center gap-2 text-sm text-rampage-charcoal">
+        <label className="flex items-center gap-2 text-sm text-white">
           <input
             type="checkbox"
             name="anonymous"
             checked={anonymous}
             onChange={(e) => setAnonymous(e.target.checked)}
-            className="h-4 w-4 rounded border-black/20 text-rampage-purple focus-ring"
+            className="h-4 w-4 rounded border-white/20 text-rampage-purple focus-ring"
           />
           Donate anonymously
         </label>
       )}
 
       {error && (
-        <p id="donate-error" role="alert" className="text-sm text-red-600 font-medium">
+        <p id="donate-error" role="alert" className="text-sm text-red-400 font-medium">
           {error}
         </p>
       )}
 
       <button
         type="submit"
-        className="w-full inline-flex items-center justify-center rounded-full bg-rampage-purple text-white font-bold py-3.5 hover:bg-rampage-purple-dark transition focus-ring"
+        className="w-full inline-flex items-center justify-center rounded bg-rampage-purple text-white font-bold uppercase tracking-wide py-3.5 hover:bg-rampage-purple-light transition focus-ring"
       >
         Continue to Checkout
       </button>

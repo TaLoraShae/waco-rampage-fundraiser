@@ -9,7 +9,7 @@
 - The receipt number on the thank-you page
 - Stripe processing fees (calculated as an estimate: 2.9% + $0.30)
 - The admin login (a single shared demo password, not real per-user auth)
-- Data storage (a local JSON file, reset anytime with `npm run reset-data`)
+- Data storage (kept in your browser's local storage — reset anytime from the admin dashboard's "Reset All Prototype Data" button, or by clearing site data)
 
 ## Already real / production-ready
 

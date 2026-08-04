@@ -1,26 +1,25 @@
-import { notFound } from "next/navigation";
+"use client";
+
+import { notFound, useRouter } from "next/navigation";
 import Link from "next/link";
-import * as db from "@/lib/db";
+import { useDataStore } from "@/lib/store";
+import * as sel from "@/lib/selectors";
 import PlayerForm from "@/components/admin/PlayerForm";
-import { updatePlayerAction } from "@/app/actions";
-import { generateQrDataUrl, getPlayerUrl } from "@/lib/qrcode";
+import { getPlayerUrl } from "@/lib/qrcode";
 import { formatCents } from "@/lib/fees";
 import QrCodeBox from "@/components/QrCodeBox";
 import CopyLinkButton from "@/components/CopyLinkButton";
 
-export default async function EditPlayerPage({
-  params,
-  searchParams,
-}: {
-  params: { id: string };
-  searchParams: { error?: string };
-}) {
-  const player = db.getPlayerById(params.id);
-  if (!player) notFound();
+export default function EditPlayerPage({ params }: { params: { id: string } }) {
+  const { db, updatePlayerById, ready } = useDataStore();
+  const router = useRouter();
+  const player = sel.getPlayerById(db, params.id);
+
+  if (ready && !player) notFound();
+  if (!player) return null;
 
   const playerUrl = getPlayerUrl(player.slug);
-  const qrDataUrl = await generateQrDataUrl(playerUrl);
-  const donations = db.getDonationsForPlayer(player.id);
+  const donations = sel.getDonationsForPlayer(db, player.id);
 
   return (
     <div className="space-y-6">
@@ -31,17 +30,19 @@ export default async function EditPlayerPage({
         </Link>
       </div>
 
-      {searchParams.error === "duplicate-slug" && (
-        <p className="text-sm rounded-lg bg-red-50 border border-red-200 text-red-700 p-3">
-          That slug is already in use by another player.
-        </p>
-      )}
-
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-        <PlayerForm action={updatePlayerAction} player={player} submitLabel="Save Changes" />
+        <PlayerForm
+          player={player}
+          submitLabel="Save Changes"
+          onSubmit={(values) => {
+            const result = updatePlayerById(player.id, values);
+            if (result.ok) router.push("/admin/players");
+            return result;
+          }}
+        />
 
         <div className="space-y-6">
-          <div className="bg-white rounded-2xl border border-black/5 shadow-card p-5 space-y-3">
+          <div className="bg-white rounded-2xl border border-black/5 shadow-card-light p-5 space-y-3">
             <p className="text-xs uppercase tracking-wide text-rampage-gray font-semibold">Custom link</p>
             <p className="text-sm font-mono break-all text-rampage-charcoal">{playerUrl}</p>
             <div className="flex gap-2">
@@ -49,19 +50,14 @@ export default async function EditPlayerPage({
                 url={playerUrl}
                 className="flex-1 text-center rounded-full border border-rampage-purple text-rampage-purple text-xs font-semibold px-3 py-2 hover:bg-rampage-purple hover:text-white transition focus-ring"
               />
-              <a
-                href={playerUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="flex-1 text-center rounded-full border border-black/10 text-rampage-charcoal text-xs font-semibold px-3 py-2 hover:bg-black/5 transition focus-ring"
-              >
+              <a href={playerUrl} target="_blank" rel="noreferrer" className="flex-1 text-center rounded-full border border-black/10 text-rampage-charcoal text-xs font-semibold px-3 py-2 hover:bg-black/5 transition focus-ring">
                 Open Page
               </a>
             </div>
-            <QrCodeBox dataUrl={qrDataUrl} fileName={player.slug} compact />
+            <QrCodeBox url={playerUrl} fileName={player.slug} compact />
           </div>
 
-          <div className="bg-white rounded-2xl border border-black/5 shadow-card p-5">
+          <div className="bg-white rounded-2xl border border-black/5 shadow-card-light p-5">
             <p className="text-xs uppercase tracking-wide text-rampage-gray font-semibold mb-3">
               Donation history ({donations.length})
             </p>
@@ -77,10 +73,7 @@ export default async function EditPlayerPage({
                 ))}
               </ul>
             )}
-            <Link
-              href={`/admin/donations?player=${player.id}`}
-              className="inline-block mt-3 text-xs text-rampage-purple hover:underline focus-ring rounded"
-            >
+            <Link href={`/admin/donations?player=${player.id}`} className="inline-block mt-3 text-xs text-rampage-purple hover:underline focus-ring rounded">
               View in Donations →
             </Link>
           </div>

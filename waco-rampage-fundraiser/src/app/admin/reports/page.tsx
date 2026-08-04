@@ -1,12 +1,17 @@
-import * as db from "@/lib/db";
+"use client";
+
+import { useDataStore } from "@/lib/store";
+import * as sel from "@/lib/selectors";
 import { formatCents } from "@/lib/fees";
 import { progressPercent } from "@/components/ProgressBar";
+import { donationsToCsv, downloadCsv } from "@/lib/csv";
 
 export default function AdminReportsPage() {
-  const players = db.getPlayers();
-  const donations = db.getDonations();
+  const { db } = useDataStore();
+  const players = sel.getPlayers(db);
+  const donations = sel.getDonations(db);
   const succeeded = donations.filter((d) => d.status === "succeeded");
-  const settings = db.getSettings();
+  const settings = db.settings;
 
   const byPlayer = players.map((p) => {
     const playerDonations = succeeded.filter((d) => d.playerId === p.id);
@@ -31,16 +36,22 @@ export default function AdminReportsPage() {
     }, {})
   ).sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime());
 
+  function handleExport() {
+    const csv = donationsToCsv(db, donations);
+    downloadCsv(csv, `waco-rampage-donations-${new Date().toISOString().slice(0, 10)}.csv`);
+  }
+
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="font-display text-2xl text-rampage-purple-dark">Reports</h1>
-        <a
-          href="/api/donations/export"
+        <button
+          type="button"
+          onClick={handleExport}
           className="inline-flex items-center rounded-full border border-rampage-purple text-rampage-purple text-sm font-semibold px-4 py-2 hover:bg-rampage-purple hover:text-white transition focus-ring"
         >
           Export All Donations (CSV)
-        </a>
+        </button>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
@@ -51,14 +62,14 @@ export default function AdminReportsPage() {
           { label: "Donation Count", value: String(succeeded.length) },
           { label: "Average Donation", value: formatCents(avgDonation) },
         ].map((c) => (
-          <div key={c.label} className="bg-white rounded-2xl border border-black/5 shadow-card p-4">
+          <div key={c.label} className="bg-white rounded-2xl border border-black/5 shadow-card-light p-4">
             <p className="text-xs uppercase tracking-wide text-rampage-gray mb-1">{c.label}</p>
             <p className="font-display text-lg text-rampage-purple-dark">{c.value}</p>
           </div>
         ))}
       </div>
 
-      <div className="bg-white rounded-2xl border border-black/5 shadow-card p-6">
+      <div className="bg-white rounded-2xl border border-black/5 shadow-card-light p-6">
         <h2 className="font-display text-lg text-rampage-purple-dark mb-4">Donations by Player</h2>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -89,7 +100,7 @@ export default function AdminReportsPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <div className="bg-white rounded-2xl border border-black/5 shadow-card p-6">
+        <div className="bg-white rounded-2xl border border-black/5 shadow-card-light p-6">
           <h2 className="font-display text-lg text-rampage-purple-dark mb-4">Donations by Date</h2>
           {byDate.length === 0 ? (
             <p className="text-sm text-rampage-gray">No donations yet.</p>
@@ -105,13 +116,11 @@ export default function AdminReportsPage() {
           )}
         </div>
 
-        <div className="bg-white rounded-2xl border border-black/5 shadow-card p-6 space-y-3">
+        <div className="bg-white rounded-2xl border border-black/5 shadow-card-light p-6 space-y-3">
           <h2 className="font-display text-lg text-rampage-purple-dark mb-1">Other Metrics</h2>
           <div className="flex justify-between text-sm border-b border-black/5 pb-2">
             <span className="text-rampage-gray">Fundraiser progress</span>
-            <span className="font-semibold text-rampage-charcoal">
-              {progressPercent(totalGross, settings.teamGoalCents)}%
-            </span>
+            <span className="font-semibold text-rampage-charcoal">{progressPercent(totalGross, settings.teamGoalCents)}%</span>
           </div>
           <div className="flex justify-between text-sm border-b border-black/5 pb-2">
             <span className="text-rampage-gray">Anonymous donations</span>
