@@ -1,0 +1,33 @@
+{
+  "name": "waco-rampage-fundraiser",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "reset-data": "node scripts/reset-data.js"
+  },
+  "dependencies": {
+    "next": "14.2.35",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "qrcode": "^1.5.3",
+    "uuid": "^9.0.1",
+    "stripe": "^16.9.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4",
+    "@types/node": "^20.14.15",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@types/qrcode": "^1.5.5",
+    "@types/uuid": "^9.0.8",
+    "autoprefixer": "^10.4.19",
+    "postcss": "^8.4.40",
+    "tailwindcss": "^3.4.7",
+    "eslint": "^8.57.0",
+    "eslint-config-next": "14.2.35"
+  }
+}

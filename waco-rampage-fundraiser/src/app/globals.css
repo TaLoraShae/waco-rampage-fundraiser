@@ -1,0 +1,80 @@
+@import url("https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&family=Oswald:wght@500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-display: "Anton", "Oswald", Impact, sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: #0e0d10;
+  color: #1c1b1f;
+}
+
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: 0.02em;
+}
+
+/* Stitched baseball seam divider — used sparingly as the signature motif */
+.stitch-seam {
+  position: relative;
+  height: 3px;
+  background: repeating-linear-gradient(
+    90deg,
+    #d9c25c 0px,
+    #d9c25c 6px,
+    transparent 6px,
+    transparent 16px
+  );
+}
+
+.stitch-seam::before,
+.stitch-seam::after {
+  content: "";
+  position: absolute;
+  top: -3px;
+  width: 8px;
+  height: 8px;
+  border-top: 2px solid #d9c25c;
+  transform: rotate(45deg);
+}
+
+/* Home-plate shaped section marker */
+.plate-marker {
+  clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%);
+}
+
+.progress-track {
+  background: #efeaf5;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  background: linear-gradient(90deg, #5b2a86, #7c3fb0);
+  border-radius: 999px;
+  transition: width 0.6s ease;
+}
+
+.focus-ring:focus-visible {
+  outline: 3px solid #d9c25c;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
