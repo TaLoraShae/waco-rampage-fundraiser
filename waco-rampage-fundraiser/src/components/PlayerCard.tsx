@@ -17,7 +17,7 @@ export default function PlayerCard({
   playerUrl: string;
   rank?: number;
 }) {
-  const pct = progressPercent(raisedCents, player.goalCents);
+  const pct = progressPercent(raisedCents, player.goal_cents);
 
   return (
     <div className="bg-rampage-charcoal metal-border rounded-2xl shadow-card overflow-hidden flex flex-col">
@@ -29,8 +29,8 @@ export default function PlayerCard({
         )}
         <div className="relative w-full aspect-[4/3] bg-black">
           <Image
-            src={player.imageUrl}
-            alt={`Placeholder photo of ${player.displayName}`}
+            src={player.image_url}
+            alt={`Placeholder photo of ${player.display_name}`}
             fill
             sizes="(max-width: 640px) 100vw, 300px"
             className="object-cover"
@@ -40,14 +40,14 @@ export default function PlayerCard({
         </div>
       </div>
       <div className="p-4 flex flex-col gap-3 flex-1">
-        <h3 className="font-display text-lg text-white tracking-wide">{player.displayName}</h3>
+        <h3 className="font-display text-lg text-white tracking-wide">{player.display_name}</h3>
         <div>
           <div className="flex justify-between text-sm font-semibold text-white/90 mb-1">
             <span>{formatCents(raisedCents)} raised</span>
             <span className="text-rampage-silver">{pct}%</span>
           </div>
-          <ProgressBar raisedCents={raisedCents} goalCents={player.goalCents} size="sm" />
-          <p className="text-xs text-rampage-gray mt-1">Goal: {formatCents(player.goalCents)}</p>
+          <ProgressBar raisedCents={raisedCents} goalCents={player.goal_cents} size="sm" />
+          <p className="text-xs text-rampage-gray mt-1">Goal: {formatCents(player.goal_cents)}</p>
         </div>
         <Link
           href={`/support/${player.slug}`}

@@ -52,8 +52,8 @@ export default function Leaderboard({
                 </div>
                 <div className="relative w-full aspect-square bg-black">
                   <Image
-                    src={entry.player.imageUrl}
-                    alt={`Placeholder photo of ${entry.player.displayName}`}
+                    src={entry.player.image_url}
+                    alt={`Placeholder photo of ${entry.player.display_name}`}
                     fill
                     sizes="300px"
                     className="object-cover"
@@ -62,12 +62,12 @@ export default function Leaderboard({
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
                 </div>
                 <div className="p-4 text-center">
-                  <p className="font-display text-white tracking-wide">{entry.player.displayName}</p>
+                  <p className="font-display text-white tracking-wide">{entry.player.display_name}</p>
                   <p className="text-sm text-rampage-silver font-semibold mt-1">
                     {formatCents(entry.raisedCents)} raised
                   </p>
                   <p className="text-xs text-rampage-gray">
-                    {progressPercent(entry.raisedCents, entry.player.goalCents)}% of goal
+                    {progressPercent(entry.raisedCents, entry.player.goal_cents)}% of goal
                   </p>
                 </div>
               </Link>

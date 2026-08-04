@@ -8,8 +8,14 @@
 - Mock transaction IDs, checkout session IDs, and payment intent IDs
 - The receipt number on the thank-you page
 - Stripe processing fees (calculated as an estimate: 2.9% + $0.30)
-- The admin login (a single shared demo password, not real per-user auth)
-- Data storage (kept in your browser's local storage — reset anytime from the admin dashboard's "Reset All Prototype Data" button, or by clearing site data)
+
+## Already real (Supabase-backed)
+
+- Administrator login (real Supabase Auth, per-person accounts, no shared demo password)
+- Owner/Treasurer/Manager roles enforced server-side and via Row Level Security
+- Player, donation, sponsor, wording, and settings data (permanent Postgres database)
+- Image uploads (Supabase Storage)
+- Audit log of administrator actions
 
 ## Already real / production-ready
 

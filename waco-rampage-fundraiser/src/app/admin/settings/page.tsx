@@ -1,55 +1,18 @@
-"use client";
-
-import { useState } from "react";
-import { useDataStore } from "@/lib/store";
+import Image from "next/image";
+import { requireAdmin } from "@/lib/adminAuth";
+import * as data from "@/lib/data";
+import { updateFundraiserSettings, updateSiteSettings, uploadImage } from "@/app/admin/data-actions";
 
 function toDateInput(iso: string) {
   return new Date(iso).toISOString().slice(0, 10);
 }
 
-export default function AdminSettingsPage() {
-  const { db, updateSettings } = useDataStore();
-  const s = db.settings;
-  const [saved, setSaved] = useState(false);
+export default async function AdminSettingsPage({ searchParams }: { searchParams: { success?: string; error?: string } }) {
+  await requireAdmin(["owner", "manager"]);
 
-  const [form, setForm] = useState({
-    fundraiserTitle: s.fundraiserTitle,
-    fundraiserDescription: s.fundraiserDescription,
-    teamGoalDollars: s.teamGoalCents / 100,
-    playerDefaultGoalDollars: s.playerDefaultGoalCents / 100,
-    startDate: toDateInput(s.startDate),
-    endDate: toDateInput(s.endDate),
-    minDonationDollars: s.minDonationCents / 100,
-    maxDonationDollars: s.maxDonationCents / 100,
-    contactEmail: s.contactEmail,
-    contactPhone: s.contactPhone,
-    leaderboardVisible: s.leaderboardVisible,
-    recentSupportersVisible: s.recentSupportersVisible,
-    donorMessagesVisible: s.donorMessagesVisible,
-    anonymousAllowed: s.anonymousAllowed,
-  });
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    updateSettings({
-      fundraiserTitle: form.fundraiserTitle,
-      fundraiserDescription: form.fundraiserDescription,
-      teamGoalCents: Math.round(form.teamGoalDollars * 100),
-      playerDefaultGoalCents: Math.round(form.playerDefaultGoalDollars * 100),
-      startDate: new Date(form.startDate).toISOString(),
-      endDate: new Date(form.endDate).toISOString(),
-      minDonationCents: Math.round(form.minDonationDollars * 100),
-      maxDonationCents: Math.round(form.maxDonationDollars * 100),
-      contactEmail: form.contactEmail,
-      contactPhone: form.contactPhone,
-      leaderboardVisible: form.leaderboardVisible,
-      recentSupportersVisible: form.recentSupportersVisible,
-      donorMessagesVisible: form.donorMessagesVisible,
-      anonymousAllowed: form.anonymousAllowed,
-    });
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
-  }
+  const fundraiser = await data.getFundraiser();
+  if (!fundraiser) return <p className="text-rampage-gray">No fundraiser found.</p>;
+  const settings = await data.getSiteSettings(fundraiser.id);
 
   const inputCls = "w-full rounded-xl border border-black/10 px-4 py-2.5 text-sm";
 
@@ -57,93 +20,154 @@ export default function AdminSettingsPage() {
     <div className="space-y-6 max-w-2xl">
       <h1 className="font-display text-2xl text-rampage-purple-dark">Fundraiser Settings</h1>
 
-      {saved && <p className="text-sm rounded-lg bg-green-50 border border-green-200 text-green-700 p-3">Settings updated.</p>}
+      {searchParams.success && <p className="text-sm rounded-lg bg-green-50 border border-green-200 text-green-700 p-3">Settings updated.</p>}
+      {searchParams.error === "upload-failed" && <p className="text-sm rounded-lg bg-red-50 border border-red-200 text-red-700 p-3">Image upload failed. Check the file and try again.</p>}
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-black/5 shadow-card-light p-6 space-y-5">
+      <form action={updateFundraiserSettings} className="bg-white rounded-2xl border border-black/5 shadow-card-light p-6 space-y-5">
+        <input type="hidden" name="id" value={fundraiser.id} />
         <div>
           <label className="block text-sm font-semibold text-rampage-charcoal mb-1">Fundraiser title</label>
-          <input value={form.fundraiserTitle} onChange={(e) => setForm({ ...form, fundraiserTitle: e.target.value })} className={inputCls} />
+          <input name="title" defaultValue={fundraiser.title} className={inputCls} />
         </div>
         <div>
           <label className="block text-sm font-semibold text-rampage-charcoal mb-1">Fundraiser description</label>
-          <textarea rows={3} value={form.fundraiserDescription} onChange={(e) => setForm({ ...form, fundraiserDescription: e.target.value })} className={inputCls} />
+          <textarea name="description" rows={3} defaultValue={fundraiser.description} className={inputCls} />
         </div>
-
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-semibold text-rampage-charcoal mb-1">Team goal (USD)</label>
-            <input type="number" value={form.teamGoalDollars} onChange={(e) => setForm({ ...form, teamGoalDollars: Number(e.target.value) })} className={inputCls} />
+            <input name="teamGoalDollars" type="number" defaultValue={fundraiser.team_goal_cents / 100} className={inputCls} />
           </div>
           <div>
             <label className="block text-sm font-semibold text-rampage-charcoal mb-1">Default player goal (USD)</label>
-            <input type="number" value={form.playerDefaultGoalDollars} onChange={(e) => setForm({ ...form, playerDefaultGoalDollars: Number(e.target.value) })} className={inputCls} />
+            <input name="playerDefaultGoalDollars" type="number" defaultValue={fundraiser.player_default_goal_cents / 100} className={inputCls} />
           </div>
         </div>
-
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-semibold text-rampage-charcoal mb-1">Start date</label>
-            <input type="date" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} className={inputCls} />
+            <input name="startDate" type="date" defaultValue={toDateInput(fundraiser.start_date)} className={inputCls} />
           </div>
           <div>
             <label className="block text-sm font-semibold text-rampage-charcoal mb-1">End date</label>
-            <input type="date" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} className={inputCls} />
+            <input name="endDate" type="date" defaultValue={toDateInput(fundraiser.end_date)} className={inputCls} />
           </div>
         </div>
-
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-semibold text-rampage-charcoal mb-1">Minimum donation (USD)</label>
-            <input type="number" value={form.minDonationDollars} onChange={(e) => setForm({ ...form, minDonationDollars: Number(e.target.value) })} className={inputCls} />
+            <input name="minDonationDollars" type="number" defaultValue={fundraiser.min_donation_cents / 100} className={inputCls} />
           </div>
           <div>
             <label className="block text-sm font-semibold text-rampage-charcoal mb-1">Maximum donation (USD)</label>
-            <input type="number" value={form.maxDonationDollars} onChange={(e) => setForm({ ...form, maxDonationDollars: Number(e.target.value) })} className={inputCls} />
+            <input name="maxDonationDollars" type="number" defaultValue={fundraiser.max_donation_cents / 100} className={inputCls} />
           </div>
         </div>
-
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-semibold text-rampage-charcoal mb-1">Contact email</label>
-            <input value={form.contactEmail} onChange={(e) => setForm({ ...form, contactEmail: e.target.value })} className={inputCls} />
+            <input name="contactEmail" defaultValue={fundraiser.contact_email} className={inputCls} />
           </div>
           <div>
             <label className="block text-sm font-semibold text-rampage-charcoal mb-1">Contact phone</label>
-            <input value={form.contactPhone} onChange={(e) => setForm({ ...form, contactPhone: e.target.value })} className={inputCls} />
+            <input name="contactPhone" defaultValue={fundraiser.contact_phone} className={inputCls} />
           </div>
         </div>
-
         <fieldset className="space-y-2">
           <legend className="text-sm font-semibold text-rampage-charcoal mb-1">Visibility toggles</legend>
-          {(
-            [
-              ["leaderboardVisible", "Show top-fundraiser leaderboard"],
-              ["recentSupportersVisible", "Show recent supporters on player pages"],
-              ["donorMessagesVisible", "Show donor messages publicly"],
-              ["anonymousAllowed", "Allow anonymous donations"],
-            ] as const
-          ).map(([key, label]) => (
-            <label key={key} className="flex items-center gap-2 text-sm text-rampage-charcoal">
-              <input
-                type="checkbox"
-                checked={form[key]}
-                onChange={(e) => setForm({ ...form, [key]: e.target.checked })}
-                className="h-4 w-4 rounded border-black/20 text-rampage-purple focus-ring"
-              />
-              {label}
+          {[
+            ["leaderboardVisible", "Show top-fundraiser leaderboard", fundraiser.leaderboard_visible],
+            ["recentSupportersVisible", "Show recent supporters on player pages", fundraiser.recent_supporters_visible],
+            ["donorMessagesVisible", "Show donor messages publicly", fundraiser.donor_messages_visible],
+            ["anonymousAllowed", "Allow anonymous donations", fundraiser.anonymous_allowed],
+          ].map(([name, label, checked]) => (
+            <label key={name as string} className="flex items-center gap-2 text-sm text-rampage-charcoal">
+              <input type="checkbox" name={name as string} defaultChecked={checked as boolean} className="h-4 w-4 rounded border-black/20 text-rampage-purple focus-ring" />
+              {label as string}
             </label>
           ))}
         </fieldset>
-
         <button type="submit" className="inline-flex items-center justify-center rounded-full bg-rampage-purple text-white font-bold px-6 py-3 hover:bg-rampage-purple-dark transition focus-ring">
-          Save Settings
+          Save Fundraiser Settings
         </button>
       </form>
 
-      <p className="text-xs text-rampage-gray">
-        Branding (logo, colors, team name, contact links) is edited directly in <code>src/lib/config.ts</code> — see
-        the README for details.
-      </p>
+      <form action={updateSiteSettings} className="bg-white rounded-2xl border border-black/5 shadow-card-light p-6 space-y-5">
+        <input type="hidden" name="fundraiserId" value={fundraiser.id} />
+        <h2 className="font-display text-lg text-rampage-purple-dark">Branding</h2>
+        <div>
+          <label className="block text-sm font-semibold text-rampage-charcoal mb-1">Team name</label>
+          <input name="teamName" defaultValue={settings?.team_name || "Waco Rampage 14U"} className={inputCls} />
+        </div>
+        <div>
+          <label className="block text-sm font-semibold text-rampage-charcoal mb-1">Tagline</label>
+          <input name="tagline" defaultValue={settings?.tagline || ""} className={inputCls} />
+        </div>
+        <div className="grid sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-semibold text-rampage-charcoal mb-1">Primary color</label>
+            <input name="primaryColor" type="color" defaultValue={settings?.primary_color || "#6B2FA0"} className="h-11 w-full rounded-xl border border-black/10" />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-rampage-charcoal mb-1">Secondary color</label>
+            <input name="secondaryColor" type="color" defaultValue={settings?.secondary_color || "#1E0E30"} className="h-11 w-full rounded-xl border border-black/10" />
+          </div>
+        </div>
+        <div>
+          <label className="block text-sm font-semibold text-rampage-charcoal mb-1">Footer text</label>
+          <input name="footerText" defaultValue={settings?.footer_text || ""} className={inputCls} />
+        </div>
+        <button type="submit" className="inline-flex items-center justify-center rounded-full bg-rampage-purple text-white font-bold px-6 py-3 hover:bg-rampage-purple-dark transition focus-ring">
+          Save Branding
+        </button>
+      </form>
+
+      <div className="bg-white rounded-2xl border border-black/5 shadow-card-light p-6 space-y-6">
+        <h2 className="font-display text-lg text-rampage-purple-dark">Images</h2>
+
+        <div className="flex items-center gap-4">
+          {settings?.logo_url && <Image src={settings.logo_url} alt="Current logo" width={64} height={64} className="object-contain" unoptimized />}
+          <form action={uploadImage} className="flex-1 flex items-center gap-2">
+            <input type="hidden" name="target" value="logo" />
+            <input type="hidden" name="fundraiserId" value={fundraiser.id} />
+            <input type="file" name="file" accept="image/*" required className="text-xs flex-1" />
+            <button type="submit" className="text-xs font-semibold rounded-full bg-rampage-purple text-white px-3 py-2 hover:bg-rampage-purple-dark transition focus-ring">
+              Upload Logo
+            </button>
+          </form>
+        </div>
+
+        <div className="flex items-center gap-4">
+          {settings?.hero_photo_url && <Image src={settings.hero_photo_url} alt="Current hero photo" width={64} height={64} className="object-cover rounded" unoptimized />}
+          <form action={uploadImage} className="flex-1 flex items-center gap-2">
+            <input type="hidden" name="target" value="hero" />
+            <input type="hidden" name="fundraiserId" value={fundraiser.id} />
+            <input type="file" name="file" accept="image/*" required className="text-xs flex-1" />
+            <button type="submit" className="text-xs font-semibold rounded-full bg-rampage-purple text-white px-3 py-2 hover:bg-rampage-purple-dark transition focus-ring">
+              Upload Hero Photo
+            </button>
+          </form>
+        </div>
+
+        <div>
+          <p className="text-sm font-semibold text-rampage-charcoal mb-2">Gallery photos ({settings?.gallery_urls?.length || 0})</p>
+          <div className="grid grid-cols-4 gap-2 mb-3">
+            {(settings?.gallery_urls || []).map((url) => (
+              <div key={url} className="relative aspect-square rounded overflow-hidden border border-black/10">
+                <Image src={url} alt="Gallery photo" fill className="object-cover" unoptimized />
+              </div>
+            ))}
+          </div>
+          <form action={uploadImage} className="flex items-center gap-2">
+            <input type="hidden" name="target" value="gallery" />
+            <input type="hidden" name="fundraiserId" value={fundraiser.id} />
+            <input type="file" name="file" accept="image/*" required className="text-xs flex-1" />
+            <button type="submit" className="text-xs font-semibold rounded-full bg-rampage-purple text-white px-3 py-2 hover:bg-rampage-purple-dark transition focus-ring">
+              Add Gallery Photo
+            </button>
+          </form>
+        </div>
+      </div>
     </div>
   );
 }

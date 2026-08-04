@@ -16,7 +16,7 @@ export default function PlayerDirectory({ entries }: { entries: DirectoryEntry[]
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return entries;
-    return entries.filter((e) => e.player.displayName.toLowerCase().includes(q));
+    return entries.filter((e) => e.player.display_name.toLowerCase().includes(q));
   }, [entries, query]);
 
   return (

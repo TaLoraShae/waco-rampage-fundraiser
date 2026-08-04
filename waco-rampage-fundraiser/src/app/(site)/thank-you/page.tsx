@@ -1,30 +1,20 @@
-"use client";
-
 import Link from "next/link";
-import { Suspense } from "react";
-import { notFound, useSearchParams } from "next/navigation";
-import { useDataStore } from "@/lib/store";
-import * as sel from "@/lib/selectors";
+import { notFound } from "next/navigation";
+import * as data from "@/lib/data";
 import { formatCents } from "@/lib/fees";
 import ShareButton from "@/components/ShareButton";
 import { getPlayerUrl } from "@/lib/qrcode";
 import { brand } from "@/lib/config";
 
-function ThankYouContent() {
-  const { db, ready } = useDataStore();
-  const searchParams = useSearchParams();
-  const donationId = searchParams.get("donationId");
+export default async function ThankYouPage({ searchParams }: { searchParams: { donationId?: string } }) {
+  const donationId = searchParams.donationId;
+  if (!donationId) notFound();
 
-  if (ready && !donationId) notFound();
-  if (!donationId) return null;
+  const donation = await data.getDonationById(donationId);
+  if (!donation) notFound();
 
-  const donation = sel.getDonations(db).find((d) => d.id === donationId);
-  if (ready && !donation) notFound();
-  if (!donation) return null;
-
-  const player = sel.getPlayerById(db, donation.playerId);
-  if (ready && !player) notFound();
-  if (!player) return null;
+  const player = await data.getPlayerById(donation.player_id);
+  if (!player) notFound();
 
   const receiptNumber = `MOCK-${donation.id.slice(0, 8).toUpperCase()}`;
   const playerUrl = getPlayerUrl(player.slug);
@@ -37,14 +27,13 @@ function ThankYouContent() {
         </div>
         <h1 className="font-display text-3xl text-white mb-2">THANK YOU!</h1>
         <p className="text-rampage-gray mb-6">
-          Your simulated donation to <span className="font-semibold text-white">{player.displayName}</span> was
-          completed.
+          Your simulated donation to <span className="font-semibold text-white">{player.display_name}</span> was completed.
         </p>
 
         <div className="rounded-xl bg-black/40 border border-white/10 p-4 text-left text-sm space-y-2 mb-6">
           <div className="flex justify-between">
             <span className="text-rampage-gray">Donation amount</span>
-            <span className="font-semibold text-white">{formatCents(donation.grossCents)}</span>
+            <span className="font-semibold text-white">{formatCents(donation.gross_cents)}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-rampage-gray">Mock receipt number</span>
@@ -52,7 +41,7 @@ function ThankYouContent() {
           </div>
           <div className="flex justify-between">
             <span className="text-rampage-gray">Player supported</span>
-            <span className="font-semibold text-white">{player.displayName}</span>
+            <span className="font-semibold text-white">{player.display_name}</span>
           </div>
         </div>
 
@@ -64,8 +53,8 @@ function ThankYouContent() {
         <div className="flex flex-col gap-3">
           <ShareButton
             url={playerUrl}
-            title={`I just supported ${player.displayName}!`}
-            text={`I just donated to ${player.displayName} with ${brand.teamName} — join me!`}
+            title={`I just supported ${player.display_name}!`}
+            text={`I just donated to ${player.display_name} with ${brand.teamName} — join me!`}
           />
           <Link
             href={`/support/${player.slug}`}
@@ -79,13 +68,5 @@ function ThankYouContent() {
         </div>
       </div>
     </div>
-  );
-}
-
-export default function ThankYouPage() {
-  return (
-    <Suspense fallback={null}>
-      <ThankYouContent />
-    </Suspense>
   );
 }

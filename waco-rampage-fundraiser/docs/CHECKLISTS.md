@@ -29,8 +29,8 @@ Complete all of these before accepting a single real donation.
 - [ ] Identify the authorized account owner (Stripe account holder)
 - [ ] Confirm the approved bank account for payouts
 - [ ] Create and verify a real Stripe account
-- [ ] Create a Supabase project and migrate off browser-only storage
-- [ ] Set up real administrator authentication (replace the demo login)
+- [x] Supabase project created and connected — already done (see docs/SUPABASE_ONBOARDING.md)
+- [x] Real administrator authentication (Supabase Auth with owner/treasurer/manager roles) — already done
 - [ ] Add a complete privacy policy
 - [ ] Collect photo permission for every player pictured
 - [ ] Add the real roster (names, goals, messages, real photos)
@@ -46,5 +46,4 @@ Complete all of these before accepting a single real donation.
 - [ ] Confirm the team total updates correctly
 - [ ] Confirm your Stripe payout schedule/settings are correct
 - [ ] Remove the "Prototype Mode" banner (automatic once `PAYMENT_MODE=stripe`)
-- [ ] Remove/replace the demo admin login credentials
 - [ ] Launch publicly

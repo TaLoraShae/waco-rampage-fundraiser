@@ -1,55 +1,62 @@
-"use client";
-
-import { notFound, useRouter } from "next/navigation";
+import { notFound } from "next/navigation";
 import Link from "next/link";
-import { useDataStore } from "@/lib/store";
-import * as sel from "@/lib/selectors";
+import { requireAdmin } from "@/lib/adminAuth";
+import * as data from "@/lib/data";
 import PlayerForm from "@/components/admin/PlayerForm";
+import { updatePlayerAction, uploadImage } from "@/app/admin/data-actions";
 import { getPlayerUrl } from "@/lib/qrcode";
 import { formatCents } from "@/lib/fees";
 import QrCodeBox from "@/components/QrCodeBox";
 import CopyLinkButton from "@/components/CopyLinkButton";
 
-export default function EditPlayerPage({ params }: { params: { id: string } }) {
-  const { db, updatePlayerById, ready } = useDataStore();
-  const router = useRouter();
-  const player = sel.getPlayerById(db, params.id);
+export default async function EditPlayerPage({
+  params,
+  searchParams,
+}: {
+  params: { id: string };
+  searchParams: { error?: string };
+}) {
+  await requireAdmin(["owner", "manager"]);
 
-  if (ready && !player) notFound();
-  if (!player) return null;
+  const player = await data.getPlayerById(params.id);
+  if (!player) notFound();
 
   const playerUrl = getPlayerUrl(player.slug);
-  const donations = sel.getDonationsForPlayer(db, player.id);
+  const donations = await data.getDonationsForPlayer(player.id);
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="font-display text-2xl text-rampage-purple-dark">Edit {player.displayName}</h1>
-        <Link href="/admin/players" className="text-sm text-rampage-purple hover:underline focus-ring rounded">
-          ← Back to players
-        </Link>
+        <h1 className="font-display text-2xl text-rampage-purple-dark">Edit {player.display_name}</h1>
+        <Link href="/admin/players" className="text-sm text-rampage-purple hover:underline focus-ring rounded">← Back to players</Link>
       </div>
 
+      {searchParams.error === "duplicate-slug" && (
+        <p className="text-sm rounded-lg bg-red-50 border border-red-200 text-red-700 p-3">That slug is already in use by another player.</p>
+      )}
+
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-        <PlayerForm
-          player={player}
-          submitLabel="Save Changes"
-          onSubmit={(values) => {
-            const result = updatePlayerById(player.id, values);
-            if (result.ok) router.push("/admin/players");
-            return result;
-          }}
-        />
+        <PlayerForm action={updatePlayerAction} player={player} fundraiserId={player.fundraiser_id} submitLabel="Save Changes" />
 
         <div className="space-y-6">
+          <div className="bg-white rounded-2xl border border-black/5 shadow-card-light p-5 space-y-3">
+            <p className="text-xs uppercase tracking-wide text-rampage-gray font-semibold">Upload real photo</p>
+            <form action={uploadImage} className="space-y-2">
+              <input type="hidden" name="target" value="player" />
+              <input type="hidden" name="relatedId" value={player.id} />
+              <input type="hidden" name="fundraiserId" value={player.fundraiser_id} />
+              <input type="file" name="file" accept="image/*" required className="text-xs" />
+              <button type="submit" className="w-full rounded-full bg-rampage-purple text-white text-xs font-semibold px-3 py-2 hover:bg-rampage-purple-dark transition focus-ring">
+                Upload Photo
+              </button>
+            </form>
+          </div>
+
           <div className="bg-white rounded-2xl border border-black/5 shadow-card-light p-5 space-y-3">
             <p className="text-xs uppercase tracking-wide text-rampage-gray font-semibold">Custom link</p>
             <p className="text-sm font-mono break-all text-rampage-charcoal">{playerUrl}</p>
             <div className="flex gap-2">
-              <CopyLinkButton
-                url={playerUrl}
-                className="flex-1 text-center rounded-full border border-rampage-purple text-rampage-purple text-xs font-semibold px-3 py-2 hover:bg-rampage-purple hover:text-white transition focus-ring"
-              />
+              <CopyLinkButton url={playerUrl} className="flex-1 text-center rounded-full border border-rampage-purple text-rampage-purple text-xs font-semibold px-3 py-2 hover:bg-rampage-purple hover:text-white transition focus-ring" />
               <a href={playerUrl} target="_blank" rel="noreferrer" className="flex-1 text-center rounded-full border border-black/10 text-rampage-charcoal text-xs font-semibold px-3 py-2 hover:bg-black/5 transition focus-ring">
                 Open Page
               </a>
@@ -58,9 +65,7 @@ export default function EditPlayerPage({ params }: { params: { id: string } }) {
           </div>
 
           <div className="bg-white rounded-2xl border border-black/5 shadow-card-light p-5">
-            <p className="text-xs uppercase tracking-wide text-rampage-gray font-semibold mb-3">
-              Donation history ({donations.length})
-            </p>
+            <p className="text-xs uppercase tracking-wide text-rampage-gray font-semibold mb-3">Donation history ({donations.length})</p>
             {donations.length === 0 ? (
               <p className="text-sm text-rampage-gray">No donations recorded yet.</p>
             ) : (
@@ -68,7 +73,7 @@ export default function EditPlayerPage({ params }: { params: { id: string } }) {
                 {donations.map((d) => (
                   <li key={d.id} className="flex justify-between border-b border-black/5 pb-2 last:border-0">
                     <span className="capitalize text-rampage-gray">{d.status}</span>
-                    <span className="font-semibold text-rampage-charcoal">{formatCents(d.grossCents)}</span>
+                    <span className="font-semibold text-rampage-charcoal">{formatCents(d.gross_cents)}</span>
                   </li>
                 ))}
               </ul>

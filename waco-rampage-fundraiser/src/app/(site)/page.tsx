@@ -1,9 +1,6 @@
-"use client";
-
 import Image from "next/image";
 import Link from "next/link";
-import { useDataStore } from "@/lib/store";
-import * as sel from "@/lib/selectors";
+import * as data from "@/lib/data";
 import { brand } from "@/lib/config";
 import { formatCents } from "@/lib/fees";
 import ProgressBar, { progressPercent } from "@/components/ProgressBar";
@@ -49,22 +46,41 @@ function ValueIcon({ icon }: { icon: string }) {
   return <LightningBolt className={cls} />;
 }
 
-export default function HomePage() {
-  const { db } = useDataStore();
-  const s = db.settings;
-  const players = sel.getDirectoryPlayers(db);
-  const teamRaisedCents = sel.getTeamRaisedCents(db);
-  const leaderboard = sel.getLeaderboard(db, 3);
-  const sponsors = sel.getSponsors(db);
-  const generalFund = sel.getGeneralFundPlayer(db);
+export default async function HomePage() {
+  const fundraiser = await data.getFundraiser();
+  if (!fundraiser) {
+    return (
+      <div className="mx-auto max-w-lg px-4 sm:px-6 py-24 text-center text-white">
+        <h1 className="font-display text-2xl mb-3">Fundraiser not configured yet</h1>
+        <p className="text-rampage-gray">
+          No active fundraiser was found in Supabase. Run <code>docs/SUPABASE_SETUP.sql</code> in your Supabase
+          project's SQL Editor to create the sample fundraiser, or check your environment variables.
+        </p>
+      </div>
+    );
+  }
 
-  const entries: DirectoryEntry[] = players.map((player) => ({
+  const [settings, players, sponsors, donations] = await Promise.all([
+    data.getSiteSettings(fundraiser.id),
+    data.getPlayers(fundraiser.id),
+    data.getSponsors(fundraiser.id),
+    data.getDonationsForFundraiser(fundraiser.id),
+  ]);
+
+  const directoryPlayers = data.getDirectoryPlayers(players);
+  const generalFund = data.getGeneralFundPlayer(players);
+  const teamRaisedCents = data.getTeamRaisedCents(donations);
+  const leaderboard = data.getLeaderboard(donations, players, 3);
+
+  const entries: DirectoryEntry[] = directoryPlayers.map((player) => ({
     player,
-    raisedCents: sel.getPlayerRaisedCents(db, player.id),
+    raisedCents: data.getPlayerRaisedCents(donations, player.id),
     playerUrl: getPlayerUrl(player.slug),
   }));
 
-  const teamPct = progressPercent(teamRaisedCents, s.teamGoalCents);
+  const teamPct = progressPercent(teamRaisedCents, fundraiser.team_goal_cents);
+  const logoUrl = settings?.logo_url || brand.logoUrl;
+  const heroPhotoUrl = settings?.hero_photo_url || "/images/hero-team-photo.jpg";
 
   return (
     <div>
@@ -74,10 +90,10 @@ export default function HomePage() {
         <div className="relative z-[1] mx-auto max-w-6xl px-4 sm:px-6 py-14 sm:py-20 grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
           <div>
             <div className="relative h-24 w-44 sm:h-28 sm:w-52 mb-6 -ml-1">
-              <Image src={brand.logoUrl} alt={`${brand.teamName} logo`} fill sizes="220px" className="object-contain object-left" priority />
+              <Image src={logoUrl} alt={`${settings?.team_name || brand.teamName} logo`} fill sizes="220px" className="object-contain object-left" priority unoptimized={logoUrl.startsWith("http")} />
             </div>
             <p className="text-rampage-purple-light font-bold uppercase tracking-widest text-xs sm:text-sm mb-3">
-              {s.fundraiserTitle}
+              {fundraiser.title}
             </p>
             <h1 className="leading-[0.95] mb-5">
               <span className="block font-display text-4xl sm:text-5xl lg:text-6xl text-white">HELP FUEL THE</span>
@@ -85,7 +101,7 @@ export default function HomePage() {
                 Waco Rampage
               </span>
             </h1>
-            <p className="text-white/75 max-w-md mb-8 leading-relaxed">{s.fundraiserDescription}</p>
+            <p className="text-white/75 max-w-md mb-8 leading-relaxed">{fundraiser.description}</p>
 
             <div className="flex flex-wrap gap-3 mb-10">
               {generalFund && (
@@ -105,7 +121,7 @@ export default function HomePage() {
               </a>
             </div>
 
-            <CountdownTimer endDate={s.endDate} />
+            <CountdownTimer endDate={fundraiser.end_date} />
             <p className="mt-4 text-white/60 text-sm italic">
               Tournament season starts soon. <span className="text-rampage-purple-light not-italic font-semibold">Let&rsquo;s finish strong.</span>
             </p>
@@ -114,12 +130,13 @@ export default function HomePage() {
           <div className="relative">
             <div className="relative w-full max-w-sm mx-auto lg:max-w-none aspect-[3/4] rounded-2xl overflow-hidden metal-border">
               <Image
-                src="/images/hero-team-photo.jpg"
+                src={heroPhotoUrl}
                 alt="Waco Rampage 14U players huddled together on the field"
                 fill
                 sizes="(max-width: 1024px) 90vw, 480px"
                 className="object-cover"
                 priority
+                unoptimized={heroPhotoUrl.startsWith("http")}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
               <div className="absolute inset-0 bg-gradient-to-r from-rampage-purple-deep/30 via-transparent to-transparent" />
@@ -131,12 +148,12 @@ export default function HomePage() {
               </p>
               <p className="font-display text-white text-3xl mb-3">
                 {formatCents(teamRaisedCents)}{" "}
-                <span className="text-rampage-gray text-lg">of {formatCents(s.teamGoalCents)}</span>
+                <span className="text-rampage-gray text-lg">of {formatCents(fundraiser.team_goal_cents)}</span>
               </p>
-              <ProgressBar raisedCents={teamRaisedCents} goalCents={s.teamGoalCents} size="lg" />
+              <ProgressBar raisedCents={teamRaisedCents} goalCents={fundraiser.team_goal_cents} size="lg" />
               <div className="flex justify-between text-rampage-gray text-xs mt-2 mb-4">
                 <span>{teamPct}% funded</span>
-                <span>{players.length} players fundraising</span>
+                <span>{directoryPlayers.length} players fundraising</span>
               </div>
               <div className="flex items-start gap-3 border-t border-white/10 pt-4">
                 <div className="h-9 w-9 shrink-0 rounded-full bg-rampage-purple/30 flex items-center justify-center">
@@ -153,7 +170,6 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* TEAM VALUES STRIP */}
         <div className="relative z-[1] border-t border-white/10 bg-black/40">
           <div className="mx-auto max-w-6xl px-4 sm:px-6 py-6 grid grid-cols-2 sm:grid-cols-4 gap-6 items-start">
             {TEAM_VALUES.map((v) => (
@@ -171,10 +187,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* LEADERBOARD */}
-      {s.leaderboardVisible && <Leaderboard entries={leaderboard} />}
+      {fundraiser.leaderboard_visible && <Leaderboard entries={leaderboard} />}
 
-      {/* PLAYER DIRECTORY */}
       <section id="players" className="mx-auto max-w-6xl px-4 sm:px-6 py-16">
         <div className="text-center mb-10">
           <p className="text-rampage-purple-light font-bold uppercase tracking-widest text-xs mb-2">Meet the Team</p>
@@ -186,7 +200,6 @@ export default function HomePage() {
         <PlayerDirectory entries={entries} />
       </section>
 
-      {/* FUND USAGE */}
       <section className="bg-rampage-charcoal texture-grain border-y border-white/10">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 py-16">
           <div className="text-center mb-10">
@@ -204,7 +217,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* SPONSORS */}
       {sponsors.length > 0 && (
         <section className="mx-auto max-w-6xl px-4 sm:px-6 py-16">
           <div className="text-center mb-10">
@@ -221,7 +233,7 @@ export default function HomePage() {
                 className="rounded-2xl bg-rampage-charcoal metal-border p-6 flex flex-col items-center text-center gap-3 hover:-translate-y-1 transition focus-ring"
               >
                 <div className="relative h-16 w-16">
-                  <Image src={sp.logoUrl} alt={`${sp.name} logo`} fill sizes="64px" className="object-contain" unoptimized />
+                  <Image src={sp.logo_url || "/images/team-logo.png"} alt={`${sp.name} logo`} fill sizes="64px" className="object-contain" unoptimized />
                 </div>
                 <p className="font-semibold text-white">{sp.name}</p>
                 <span className="text-xs uppercase tracking-wide text-rampage-purple-light font-bold">{sp.level} Sponsor</span>
@@ -231,31 +243,29 @@ export default function HomePage() {
         </section>
       )}
 
-      {/* GALLERY */}
       <section className="bg-rampage-charcoal texture-grain border-y border-white/10">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 py-16">
           <div className="text-center mb-10">
             <p className="text-rampage-purple-light font-bold uppercase tracking-widest text-xs mb-2">Team photos</p>
             <h2 className="font-display text-3xl sm:text-4xl text-white">GALLERY</h2>
             <p className="text-rampage-gray mt-2 text-sm max-w-lg mx-auto">
-              Placeholder photos shown below — replace them in <code>src/lib/config.ts</code> once more real team
-              photos (with parent/guardian consent) are ready.
+              Admins can upload real gallery photos from Admin → Site Wording.
             </p>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            {brand.galleryImages.map((_, i) => (
-              <div
-                key={i}
-                className="relative aspect-square rounded-xl bg-black/50 metal-border flex items-center justify-center text-rampage-gray font-display text-sm"
-              >
-                Team Photo Placeholder
+            {(settings?.gallery_urls && settings.gallery_urls.length > 0 ? settings.gallery_urls : brand.galleryImages).map((url, i) => (
+              <div key={i} className="relative aspect-square rounded-xl bg-black/50 metal-border overflow-hidden flex items-center justify-center text-rampage-gray font-display text-sm">
+                {settings?.gallery_urls && settings.gallery_urls.length > 0 ? (
+                  <Image src={url} alt="Team photo" fill className="object-cover" unoptimized />
+                ) : (
+                  "Team Photo Placeholder"
+                )}
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* FAQ */}
       <section id="faq" className="mx-auto max-w-3xl px-4 sm:px-6 py-16">
         <div className="text-center mb-10">
           <p className="text-rampage-purple-light font-bold uppercase tracking-widest text-xs mb-2">Questions</p>
@@ -274,7 +284,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* PRIVACY STATEMENT */}
       <section className="mx-auto max-w-3xl px-4 sm:px-6 pb-16">
         <div className="rounded-2xl bg-rampage-charcoal metal-border p-6 text-sm text-rampage-gray leading-relaxed">
           <p className="font-semibold text-white mb-2">A note on player privacy</p>

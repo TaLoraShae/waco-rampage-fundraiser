@@ -25,20 +25,22 @@ Open http://localhost:3000 in your browser.
 
 - Public site: http://localhost:3000
 - Admin dashboard: http://localhost:3000/admin/login
-  - Email: `admin@wacorampage.test`
-  - Password: `RampageDemo2026!`
 
-That demo login is documented in `.env.local` and is **for prototype
-review only** — see `docs/CHECKLISTS.md` before a real launch.
+There's no demo login anymore — every administrator account is real
+(Supabase Auth). Before the admin dashboard will work, complete the
+setup in `docs/SUPABASE_ONBOARDING.md`, which walks through creating
+your Supabase project, running the schema, adding environment
+variables, and creating your first **owner** account.
 
-## Resetting sample data
+## Data storage
 
-The prototype stores its data in your **browser's local storage**
-(not a server file), seeded automatically from `src/lib/seedData.ts`
-the first time the app loads. To wipe it back to the original sample
-players/donations/sponsors, open the admin dashboard and click
-**Reset All Prototype Data** — or just clear this site's data in your
-browser settings.
+This site's data — players, donations, sponsors, site wording, and
+images — is stored permanently in **Supabase** (a real Postgres
+database), not in browser storage or on the server filesystem. That
+means it's safe to deploy on Vercel, shared across every admin and
+device, and survives redeploys. See `docs/SUPABASE_ONBOARDING.md` for
+the full setup walkthrough — you'll need to complete that before the
+site will run, since it requires Supabase environment variables.
 
 ## What's included
 
@@ -68,10 +70,10 @@ browser settings.
   `src/app/api/webhooks/stripe/route.ts` are fully written but stay
   inactive until you set `PAYMENT_MODE=stripe` and add real keys.
 - **Database-ready architecture** — every page/component reads and
-  writes through `src/lib/store.tsx` (a browser-based data store — see
-  "Resetting sample data" above) or `src/lib/selectors.ts` for reads.
-  Swapping in Supabase means rewriting that data layer, not the UI. See
-  `docs/SUPABASE_SCHEMA.md`.
+  writes through `src/lib/data.ts` / `src/lib/adminData.ts` (reads) and
+  `src/app/admin/data-actions.ts` (writes) — every permission is
+  enforced by Supabase Row Level Security, not just app code. See
+  `docs/SUPABASE_SETUP.sql`.
 
 ## Editing branding and wording
 
@@ -115,11 +117,13 @@ src/
     auth.ts                        Prototype admin auth
   middleware.ts            Protects /admin routes
 docs/
-  SUPABASE_SCHEMA.md / .sql   Proposed tables, SQL, RLS, storage, auth plan, migration steps
-  STRIPE_SETUP.md               Exact steps to connect a real Stripe account
-  DEPLOYMENT.md                   GitHub + Vercel + custom domain instructions
-  CHECKLISTS.md                    Prototype review checklist + production launch checklist
-  SIMULATED_VS_REAL.md               What's fake right now vs. what's already real
+  SUPABASE_SETUP.sql            Full schema: tables, RLS policies, storage buckets, seed data
+  SUPABASE_ONBOARDING.md          Click-by-click Supabase setup, env vars, first owner account, invites
+  GITHUB_REPLACE_INSTRUCTIONS.md    Browser-only steps to update your GitHub repo so Vercel redeploys
+  STRIPE_SETUP.md                     Exact steps to connect a real Stripe account (not yet connected)
+  DEPLOYMENT.md                         GitHub + Vercel + custom domain instructions
+  CHECKLISTS.md                           Prototype review checklist + production launch checklist
+  SIMULATED_VS_REAL.md                      What's fake right now vs. what's already real
 ```
 
 ## Deploying
@@ -131,8 +135,7 @@ and review the prototype.
 ## Going live with real payments later
 
 1. `docs/STRIPE_SETUP.md` — connect a real Stripe account
-2. `docs/SUPABASE_SCHEMA.md` — migrate off browser-only storage
-3. `docs/CHECKLISTS.md` — full production launch checklist
+2. `docs/CHECKLISTS.md` — full production launch checklist
 4. Set `PAYMENT_MODE=stripe` and redeploy — the prototype banner
    disappears automatically and the real Stripe Checkout flow takes
    over.
@@ -141,5 +144,5 @@ and review the prototype.
 
 Next.js 14 (App Router) · TypeScript · Tailwind CSS · `qrcode` for QR
 generation · `uuid` for IDs · `stripe` SDK (ready, inactive until
-configured) · browser-based (localStorage) storage with a documented
-reset process (swap-ready for Supabase).
+configured) · Supabase (Postgres, Auth, Storage) with Row Level
+Security for every table.

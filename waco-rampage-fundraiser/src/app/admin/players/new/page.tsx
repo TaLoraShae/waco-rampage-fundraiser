@@ -1,24 +1,17 @@
-"use client";
-
-import { useRouter } from "next/navigation";
+import { requireAdmin } from "@/lib/adminAuth";
+import * as data from "@/lib/data";
 import PlayerForm from "@/components/admin/PlayerForm";
-import { useDataStore } from "@/lib/store";
+import { createPlayer } from "@/app/admin/data-actions";
 
-export default function NewPlayerPage() {
-  const { createPlayer } = useDataStore();
-  const router = useRouter();
+export default async function NewPlayerPage() {
+  await requireAdmin(["owner", "manager"]);
+  const fundraiser = await data.getFundraiser();
+  if (!fundraiser) return <p className="text-rampage-gray">No fundraiser found.</p>;
 
   return (
     <div className="space-y-6">
       <h1 className="font-display text-2xl text-rampage-purple-dark">Add Player</h1>
-      <PlayerForm
-        submitLabel="Add Player"
-        onSubmit={(values) => {
-          const result = createPlayer({ ...values, active: true });
-          if (result.ok) router.push("/admin/players");
-          return result;
-        }}
-      />
+      <PlayerForm action={createPlayer} fundraiserId={fundraiser.id} submitLabel="Add Player" />
     </div>
   );
 }

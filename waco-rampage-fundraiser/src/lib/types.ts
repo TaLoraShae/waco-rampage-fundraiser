@@ -1,85 +1,137 @@
-// Central type definitions.
-// This shape is intentionally close to the proposed Supabase schema
-// (see docs/SUPABASE_SCHEMA.sql) so the mock layer can be swapped for
-// a real database later without changing the UI.
+// These types mirror the Supabase schema in docs/SUPABASE_SETUP.sql
+// column-for-column (snake_case, matching the database) so query
+// results can be used directly without a mapping layer.
 
+export type AdminRole = "owner" | "treasurer" | "manager";
 export type PaymentStatus = "succeeded" | "failed" | "canceled";
 export type PaymentSource = "mock" | "stripe";
+export type SponsorLevel = "Gold" | "Silver" | "Bronze" | "Community";
+
+export interface Team {
+  id: string;
+  name: string;
+  created_at: string;
+}
+
+export interface Fundraiser {
+  id: string;
+  team_id: string;
+  title: string;
+  description: string;
+  team_goal_cents: number;
+  player_default_goal_cents: number;
+  start_date: string;
+  end_date: string;
+  min_donation_cents: number;
+  max_donation_cents: number;
+  suggested_amounts_cents: number[];
+  leaderboard_visible: boolean;
+  recent_supporters_visible: boolean;
+  donor_messages_visible: boolean;
+  anonymous_allowed: boolean;
+  contact_email: string;
+  contact_phone: string;
+  social: { instagram?: string; facebook?: string; twitter?: string; tiktok?: string };
+  active: boolean;
+  created_at: string;
+}
 
 export interface Player {
   id: string;
+  fundraiser_id: string;
   slug: string;
-  displayName: string; // e.g. "DoMani G." — first name + last initial only
-  imageUrl: string; // placeholder or uploaded photo
-  goalCents: number;
-  message: string; // short personal fundraising message
+  display_name: string;
+  image_url: string;
+  goal_cents: number;
+  message: string;
   active: boolean;
-  displayOrder: number;
-  createdAt: string;
-  /** True only for the single "Team General Fund" pseudo-player used by the
-   * homepage's main Donate button. Excluded from the player directory,
-   * search results, and the leaderboard. */
-  isGeneralFund?: boolean;
+  display_order: number;
+  is_general_fund: boolean;
+  created_at: string;
 }
 
-export interface Donation {
+// Public-safe donation shape (matches the column-restricted grant for
+// anon/authenticated — see docs/SUPABASE_SETUP.sql section 6).
+export interface PublicDonation {
   id: string;
-  playerId: string;
-  fundraiserId: string;
-  grossCents: number;
-  feeCents: number; // estimated Stripe fee (2.9% + $0.30) while in mock mode
-  netCents: number;
-  donorName: string;
-  donorEmail: string;
-  donorMessage: string;
-  anonymous: boolean;
+  player_id: string;
+  fundraiser_id: string;
+  gross_cents: number;
   status: PaymentStatus;
-  paymentMethod: string; // e.g. "mock_card", "card"
   source: PaymentSource;
-  checkoutSessionId: string;
-  paymentIntentId: string;
-  createdAt: string;
+  anonymous: boolean;
+  donor_name: string;
+  donor_message: string;
+  created_at: string;
   refunded: boolean;
-  adminNotes: string;
+}
+
+// Full donation shape, only ever returned by the `donations_financial`
+// view to owner/treasurer admins.
+export interface FinancialDonation extends PublicDonation {
+  fee_cents: number;
+  net_cents: number;
+  donor_email: string;
+  payment_method: string;
+  checkout_session_id: string;
+  payment_intent_id: string;
+  admin_notes: string;
 }
 
 export interface Sponsor {
   id: string;
+  fundraiser_id: string;
   name: string;
-  logoUrl: string;
+  logo_url: string;
   website: string;
-  level: "Gold" | "Silver" | "Bronze" | "Community";
-  displayOrder: number;
+  level: SponsorLevel;
+  display_order: number;
 }
 
-export interface FundraiserSettings {
-  fundraiserTitle: string;
-  fundraiserDescription: string;
-  teamGoalCents: number;
-  playerDefaultGoalCents: number;
-  startDate: string;
-  endDate: string;
-  minDonationCents: number;
-  maxDonationCents: number;
-  suggestedAmountsCents: number[];
-  fundUsageCategories: { label: string; description: string }[];
-  leaderboardVisible: boolean;
-  recentSupportersVisible: boolean;
-  donorMessagesVisible: boolean;
-  anonymousAllowed: boolean;
-  contactEmail: string;
-  contactPhone: string;
-  social: {
-    instagram?: string;
-    facebook?: string;
-    twitter?: string;
-    tiktok?: string;
-  };
+export interface SiteContentItem {
+  id: string;
+  fundraiser_id: string;
+  section: string;
+  key: string;
+  value: string;
+  display_order: number;
+  updated_at: string;
+  updated_by: string | null;
 }
 
-export interface Database {
-  players: Player[];
-  donations: Donation[];
-  sponsors: Sponsor[];
-  settings: FundraiserSettings;
+export interface SiteSettings {
+  id: string;
+  fundraiser_id: string;
+  team_name: string;
+  tagline: string;
+  logo_url: string;
+  hero_photo_url: string;
+  gallery_urls: string[];
+  primary_color: string;
+  secondary_color: string;
+  footer_text: string;
+  updated_at: string;
+  updated_by: string | null;
+}
+
+export interface Administrator {
+  id: string;
+  user_id: string;
+  email: string;
+  display_name: string;
+  role: AdminRole;
+  active: boolean;
+  created_at: string;
+  created_by: string | null;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  actor_administrator_id: string | null;
+  actor_email: string;
+  action: string;
+  entity_type: string;
+  entity_id: string;
+  details: Record<string, unknown>;
+  created_at: string;
 }

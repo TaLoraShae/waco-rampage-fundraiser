@@ -1,19 +1,21 @@
+import { requireAdmin } from "@/lib/adminAuth";
+
 const SECTIONS = [
   {
     title: "What this website does",
-    body: "This site lets the Waco Rampage 14U booster club run an online fundraiser: a team page, individual player pages with shareable links and QR codes, a donation flow, and an admin dashboard to manage players, donations, sponsors, and reports.",
+    body: "This site lets the Waco Rampage 14U booster club run an online fundraiser: a team page, individual player pages with shareable links and QR codes, a donation flow, and an admin dashboard to manage players, donations, sponsors, wording, images, and reports.",
   },
   {
     title: "What Mock Mode does",
-    body: "While PAYMENT_MODE=mock, the entire donation flow is simulated. No real card details are collected, no money moves, and every 'payment' is created directly in the local data store so you can test the full experience risk-free.",
+    body: "While PAYMENT_MODE=mock, the entire donation flow is simulated. No real card details are collected, no money moves, and every 'payment' is written directly into the real Supabase donations table (clearly marked as a mock source) so you can test the full experience risk-free.",
   },
   {
     title: "What Stripe does",
-    body: "Stripe is the real payment processor. Once connected, Stripe securely collects card details, processes the charge, and tells this site (via a webhook) whether the payment succeeded. Stripe charges a standard processing fee per transaction (estimated in this prototype as 2.9% + $0.30 — confirm your actual rate on Stripe's pricing page).",
+    body: "Stripe is the real payment processor. Once connected, Stripe securely collects card details, processes the charge, and tells this site (via a webhook) whether the payment succeeded. Stripe charges a standard processing fee per transaction (estimated in this app as 2.9% + $0.30 — confirm your actual rate on Stripe's pricing page). Stripe is not connected yet.",
   },
   {
-    title: "What Supabase would do",
-    body: "Supabase would replace the browser's local storage with a real hosted database (plus optional file storage for photos and authentication for admin logins), so data is shared across devices/browsers and persists reliably in production.",
+    title: "What Supabase does",
+    body: "Supabase is this site's real, permanent database, file storage, and login system. Every player, donation, sponsor, and piece of site wording lives in Supabase — along with administrator accounts and roles. Row Level Security policies (see docs/SUPABASE_SETUP.sql) control exactly what the public can and can't see or change, and what each administrator role can do.",
   },
   {
     title: "What Vercel does",
@@ -32,12 +34,14 @@ const SECTIONS = [
 const COSTS = [
   { item: "Vercel (Hobby plan)", type: "Free plan available", frequency: "N/A", notes: "Paid tiers exist for higher usage or team features." },
   { item: "GitHub", type: "Free plan available", frequency: "N/A", notes: "Free for public and most small private repositories." },
-  { item: "Stripe account", type: "Free to create", frequency: "Per-transaction fee only", notes: "No monthly fee; a processing fee is deducted from each real donation." },
-  { item: "Supabase", type: "Free plan available", frequency: "Monthly (if you outgrow the free tier)", notes: "Free tier is generous for a single-team fundraiser." },
+  { item: "Supabase", type: "Free plan available", frequency: "Monthly (if you outgrow the free tier)", notes: "Free tier is generous for a single-team fundraiser. Covers database, auth, and storage." },
+  { item: "Stripe account", type: "Free to create", frequency: "Per-transaction fee only", notes: "No monthly fee; a processing fee is deducted from each real donation. Not connected yet." },
   { item: "Custom domain", type: "Paid", frequency: "Annual, one-time renewal", notes: "Typically $10–$20/year depending on the registrar and domain extension." },
 ];
 
-export default function SetupAndCostsPage() {
+export default async function SetupAndCostsPage() {
+  await requireAdmin();
+
   return (
     <div className="space-y-8 max-w-3xl">
       <div>
@@ -87,17 +91,21 @@ export default function SetupAndCostsPage() {
       </div>
 
       <div className="rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 text-sm p-5">
-        <p className="font-semibold mb-1">Before accepting real donations, you must:</p>
+        <p className="font-semibold mb-1">Already done:</p>
+        <ul className="list-disc list-inside space-y-1 mb-3">
+          <li>Real Supabase database, storage, and authentication connected</li>
+          <li>Row Level Security protecting every table</li>
+          <li>Real administrator login with owner/treasurer/manager roles</li>
+        </ul>
+        <p className="font-semibold mb-1">Still required before accepting real donations:</p>
         <ul className="list-disc list-inside space-y-1">
-          <li>Get organization approval and identify the authorized account owner</li>
+          <li>Get organization approval and identify the authorized Stripe account owner</li>
           <li>Create and verify a real Stripe account connected to an approved bank account</li>
           <li>Add real Stripe keys and create the Stripe webhook, then set PAYMENT_MODE=stripe</li>
-          <li>Migrate from browser-only storage to Supabase (or another shared, real database)</li>
-          <li>Replace the prototype demo login with real administrator authentication</li>
           <li>Add a complete privacy policy and collect photo permission for all players</li>
-          <li>Remove the prototype banner and demo login before the public launch</li>
+          <li>Remove the prototype banner before the public launch</li>
         </ul>
-        <p className="mt-2">See <code>docs/PRODUCTION_LAUNCH_CHECKLIST.md</code> for the full checklist.</p>
+        <p className="mt-2">See <code>docs/CHECKLISTS.md</code> for the full checklist.</p>
       </div>
     </div>
   );

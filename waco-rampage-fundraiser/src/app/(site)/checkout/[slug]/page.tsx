@@ -1,69 +1,34 @@
-"use client";
-
-import { Suspense, useState } from "react";
-import { notFound, useRouter, useSearchParams } from "next/navigation";
-import { useDataStore } from "@/lib/store";
-import * as sel from "@/lib/selectors";
+import { notFound } from "next/navigation";
+import * as data from "@/lib/data";
 import { formatCents } from "@/lib/fees";
 import { isMockMode } from "@/lib/payment-mode";
+import CheckoutActions from "@/components/CheckoutActions";
 
-function CheckoutContent({ params }: { params: { slug: string } }) {
-  const { db, addDonation } = useDataStore();
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const [submitting, setSubmitting] = useState<string | null>(null);
+export default async function CheckoutPage({
+  params,
+  searchParams,
+}: {
+  params: { slug: string };
+  searchParams: {
+    amountCents?: string;
+    donorName?: string;
+    donorEmail?: string;
+    anonymous?: string;
+    donorMessage?: string;
+    result?: string;
+  };
+}) {
+  const player = await data.getPlayerBySlug(params.slug);
+  if (!player) notFound();
 
-  const player = sel.getPlayerBySlug(db, params.slug);
+  const amountCents = Math.round(Number(searchParams.amountCents || 0));
+  const donorName = searchParams.donorName || "";
+  const donorEmail = searchParams.donorEmail || "";
+  const anonymous = searchParams.anonymous === "1" || searchParams.anonymous === "on";
+  const donorMessage = searchParams.donorMessage || "";
+  const failed = searchParams.result === "failed";
 
-  const amountCents = Math.round(Number(searchParams.get("amountCents") || 0));
-  const donorName = searchParams.get("donorName") || "";
-  const donorEmail = searchParams.get("donorEmail") || "";
-  const anonymous = searchParams.get("anonymous") === "1" || searchParams.get("anonymous") === "on";
-  const donorMessage = searchParams.get("donorMessage") || "";
-  const failed = searchParams.get("result") === "failed";
-
-  if (!player || !amountCents) {
-    if (!player) notFound();
-  }
-
-  function handleResult(result: "succeeded" | "failed" | "canceled") {
-    if (!player) return;
-    setSubmitting(result);
-
-    if (result === "canceled") {
-      router.push(`/support/${player.slug}?canceled=1`);
-      return;
-    }
-
-    const donation = addDonation({
-      slug: player.slug,
-      amountCents,
-      donorName,
-      donorEmail,
-      anonymous,
-      donorMessage,
-      result,
-    });
-
-    if (result === "failed") {
-      const qs = new URLSearchParams({
-        result: "failed",
-        amountCents: String(amountCents),
-        donorName,
-        donorEmail,
-        anonymous: anonymous ? "1" : "",
-        donorMessage,
-      });
-      router.push(`/checkout/${player.slug}?${qs.toString()}`);
-      return;
-    }
-
-    if (donation) {
-      router.push(`/thank-you?donationId=${donation.id}`);
-    }
-  }
-
-  if (!player) return null;
+  if (!amountCents) notFound();
 
   return (
     <div className="mx-auto max-w-lg px-4 sm:px-6 py-12">
@@ -89,7 +54,7 @@ function CheckoutContent({ params }: { params: { slug: string } }) {
           <dl className="space-y-2 text-sm">
             <div className="flex justify-between">
               <dt className="text-rampage-gray">Supporting</dt>
-              <dd className="font-semibold text-white">{player.displayName}</dd>
+              <dd className="font-semibold text-white">{player.display_name}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-rampage-gray">Donation amount</dt>
@@ -116,42 +81,18 @@ function CheckoutContent({ params }: { params: { slug: string } }) {
             <p>Card ending in •••• 4242 (mock — not a real card)</p>
           </div>
 
-          <div className="space-y-3 pt-2">
-            <button
-              type="button"
-              disabled={!!submitting}
-              onClick={() => handleResult("succeeded")}
-              className="w-full inline-flex items-center justify-center rounded bg-rampage-purple text-white font-bold uppercase tracking-wide py-3.5 hover:bg-rampage-purple-light transition focus-ring disabled:opacity-50"
-            >
-              {submitting === "succeeded" ? "Processing..." : "Complete Test Donation"}
-            </button>
-            <button
-              type="button"
-              disabled={!!submitting}
-              onClick={() => handleResult("failed")}
-              className="w-full inline-flex items-center justify-center rounded border-2 border-red-500/40 text-red-300 font-semibold py-3 hover:bg-red-950/30 transition focus-ring disabled:opacity-50"
-            >
-              Simulate Failed Payment
-            </button>
-            <button
-              type="button"
-              disabled={!!submitting}
-              onClick={() => handleResult("canceled")}
-              className="w-full inline-flex items-center justify-center rounded text-rampage-gray font-semibold py-3 hover:text-white transition focus-ring disabled:opacity-50"
-            >
-              Cancel
-            </button>
-          </div>
+          <CheckoutActions
+            playerId={player.id}
+            fundraiserId={player.fundraiser_id}
+            slug={player.slug}
+            amountCents={amountCents}
+            donorName={donorName}
+            donorEmail={donorEmail}
+            anonymous={anonymous}
+            donorMessage={donorMessage}
+          />
         </div>
       </div>
     </div>
-  );
-}
-
-export default function CheckoutPage({ params }: { params: { slug: string } }) {
-  return (
-    <Suspense fallback={null}>
-      <CheckoutContent params={params} />
-    </Suspense>
   );
 }

@@ -1,38 +1,20 @@
-"use client";
-
 import Image from "next/image";
-import { useState } from "react";
-import { useDataStore } from "@/lib/store";
-import * as sel from "@/lib/selectors";
-import { Sponsor } from "@/lib/types";
+import { requireAdmin } from "@/lib/adminAuth";
+import * as data from "@/lib/data";
+import { createSponsor, deleteSponsorAction, uploadImage } from "@/app/admin/data-actions";
 
-export default function AdminSponsorsPage() {
-  const { db, createSponsor, deleteSponsorById } = useDataStore();
-  const sponsors = sel.getSponsors(db);
+export default async function AdminSponsorsPage({ searchParams }: { searchParams: { success?: string } }) {
+  await requireAdmin(["owner", "manager"]);
 
-  const [name, setName] = useState("");
-  const [website, setWebsite] = useState("");
-  const [logoUrl, setLogoUrl] = useState("");
-  const [level, setLevel] = useState<Sponsor["level"]>("Gold");
+  const fundraiser = await data.getFundraiser();
+  if (!fundraiser) return <p className="text-rampage-gray">No fundraiser found.</p>;
 
-  function handleAdd(e: React.FormEvent) {
-    e.preventDefault();
-    if (!name.trim()) return;
-    createSponsor({
-      name: name.trim(),
-      website: website.trim(),
-      level,
-      logoUrl: logoUrl.trim() || `https://api.dicebear.com/7.x/shapes/svg?seed=${encodeURIComponent(name)}`,
-    });
-    setName("");
-    setWebsite("");
-    setLogoUrl("");
-    setLevel("Gold");
-  }
+  const sponsors = await data.getSponsors(fundraiser.id);
 
   return (
     <div className="space-y-6">
       <h1 className="font-display text-2xl text-rampage-purple-dark">Sponsor Management</h1>
+      {searchParams.success && <p className="text-sm rounded-lg bg-green-50 border border-green-200 text-green-700 p-3">Saved.</p>}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
         <div className="bg-white rounded-2xl border border-black/5 shadow-card-light overflow-hidden">
@@ -51,51 +33,54 @@ export default function AdminSponsorsPage() {
                 <tr key={s.id} className="border-t border-black/5">
                   <td className="px-4 py-3">
                     <div className="relative h-10 w-10">
-                      <Image src={s.logoUrl} alt={`${s.name} logo`} fill className="object-contain" unoptimized />
+                      <Image src={s.logo_url} alt={`${s.name} logo`} fill className="object-contain" unoptimized />
                     </div>
                   </td>
                   <td className="px-4 py-3 font-medium text-rampage-charcoal">{s.name}</td>
                   <td className="px-4 py-3">{s.level}</td>
                   <td className="px-4 py-3 truncate max-w-[160px]">
-                    <a href={s.website} target="_blank" rel="noreferrer" className="text-rampage-purple hover:underline focus-ring rounded">
-                      {s.website}
-                    </a>
+                    <a href={s.website} target="_blank" rel="noreferrer" className="text-rampage-purple hover:underline focus-ring rounded">{s.website}</a>
                   </td>
-                  <td className="px-4 py-3">
-                    <button type="button" onClick={() => deleteSponsorById(s.id)} className="text-xs font-semibold text-red-600 hover:underline focus-ring rounded">
-                      Remove
-                    </button>
+                  <td className="px-4 py-3 space-y-2">
+                    <form action={uploadImage} className="flex items-center gap-1">
+                      <input type="hidden" name="target" value="sponsor" />
+                      <input type="hidden" name="relatedId" value={s.id} />
+                      <input type="hidden" name="fundraiserId" value={fundraiser.id} />
+                      <input type="file" name="file" accept="image/*" required className="text-[10px] w-24" />
+                      <button type="submit" className="text-[10px] font-semibold text-rampage-purple hover:underline focus-ring rounded">Logo</button>
+                    </form>
+                    <form action={deleteSponsorAction}>
+                      <input type="hidden" name="id" value={s.id} />
+                      <button type="submit" className="text-xs font-semibold text-red-600 hover:underline focus-ring rounded">Remove</button>
+                    </form>
                   </td>
                 </tr>
               ))}
               {sponsors.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-rampage-gray">
-                    No sponsors added yet.
-                  </td>
-                </tr>
+                <tr><td colSpan={5} className="px-4 py-8 text-center text-rampage-gray">No sponsors added yet.</td></tr>
               )}
             </tbody>
           </table>
         </div>
 
-        <form onSubmit={handleAdd} className="bg-white rounded-2xl border border-black/5 shadow-card-light p-5 space-y-4 h-fit">
+        <form action={createSponsor} className="bg-white rounded-2xl border border-black/5 shadow-card-light p-5 space-y-4 h-fit">
+          <input type="hidden" name="fundraiserId" value={fundraiser.id} />
           <h2 className="font-display text-lg text-rampage-purple-dark">Add Sponsor</h2>
           <div>
             <label htmlFor="name" className="block text-sm font-semibold text-rampage-charcoal mb-1">Sponsor name</label>
-            <input id="name" value={name} onChange={(e) => setName(e.target.value)} required className="w-full rounded-xl border border-black/10 px-4 py-2.5 text-sm" />
+            <input id="name" name="name" required className="w-full rounded-xl border border-black/10 px-4 py-2.5 text-sm" />
           </div>
           <div>
             <label htmlFor="website" className="block text-sm font-semibold text-rampage-charcoal mb-1">Website</label>
-            <input id="website" value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="https://..." className="w-full rounded-xl border border-black/10 px-4 py-2.5 text-sm" />
+            <input id="website" name="website" placeholder="https://..." className="w-full rounded-xl border border-black/10 px-4 py-2.5 text-sm" />
           </div>
           <div>
-            <label htmlFor="logoUrl" className="block text-sm font-semibold text-rampage-charcoal mb-1">Logo URL (optional)</label>
-            <input id="logoUrl" value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} placeholder="https://..." className="w-full rounded-xl border border-black/10 px-4 py-2.5 text-sm" />
+            <label htmlFor="logoUrl" className="block text-sm font-semibold text-rampage-charcoal mb-1">Logo URL (optional — or upload after creating)</label>
+            <input id="logoUrl" name="logoUrl" placeholder="https://..." className="w-full rounded-xl border border-black/10 px-4 py-2.5 text-sm" />
           </div>
           <div>
             <label htmlFor="level" className="block text-sm font-semibold text-rampage-charcoal mb-1">Sponsor level</label>
-            <select id="level" value={level} onChange={(e) => setLevel(e.target.value as Sponsor["level"])} className="w-full rounded-xl border border-black/10 px-4 py-2.5 text-sm">
+            <select id="level" name="level" className="w-full rounded-xl border border-black/10 px-4 py-2.5 text-sm">
               <option>Gold</option>
               <option>Silver</option>
               <option>Bronze</option>

@@ -1,62 +1,60 @@
-"use client";
-
 import Link from "next/link";
-import { useDataStore } from "@/lib/store";
-import * as sel from "@/lib/selectors";
+import { requireAdmin } from "@/lib/adminAuth";
+import * as data from "@/lib/data";
+import * as adminData from "@/lib/adminData";
 import { formatCents } from "@/lib/fees";
 
-export default function AdminDashboardPage() {
-  const { db, resetAll } = useDataStore();
-  const settings = db.settings;
-  const players = sel.getPlayers(db);
-  const activePlayers = players.filter((p) => p.active && !p.isGeneralFund);
-  const donations = sel.getDonations(db);
+export default async function AdminDashboardPage() {
+  const admin = await requireAdmin();
+  const canSeeFinancials = admin.role === "owner" || admin.role === "treasurer";
+
+  const fundraiser = await data.getFundraiser();
+  if (!fundraiser) {
+    return <p className="text-rampage-gray">No fundraiser found. Run docs/SUPABASE_SETUP.sql first.</p>;
+  }
+
+  const [players, donations, financialDonations] = await Promise.all([
+    data.getPlayers(fundraiser.id),
+    data.getDonationsForFundraiser(fundraiser.id),
+    canSeeFinancials ? adminData.getFinancialDonations(fundraiser.id) : Promise.resolve([]),
+  ]);
+
+  const activePlayers = players.filter((p) => p.active && !p.is_general_fund);
   const succeeded = donations.filter((d) => d.status === "succeeded");
-  const teamRaised = sel.getTeamRaisedCents(db);
-  const totalFees = succeeded.reduce((s, d) => s + d.feeCents, 0);
-  const totalNet = succeeded.reduce((s, d) => s + d.netCents, 0);
+  const teamRaised = data.getTeamRaisedCents(donations);
+  const totalFees = financialDonations.filter((d) => d.status === "succeeded").reduce((s, d) => s + d.fee_cents, 0);
+  const totalNet = financialDonations.filter((d) => d.status === "succeeded").reduce((s, d) => s + d.net_cents, 0);
   const avgDonation = succeeded.length ? Math.round(teamRaised / succeeded.length) : 0;
-  const daysRemaining = Math.max(0, Math.ceil((new Date(settings.endDate).getTime() - Date.now()) / 86400000));
-  const leaderboard = sel.getLeaderboard(db, 1);
+  const daysRemaining = Math.max(0, Math.ceil((new Date(fundraiser.end_date).getTime() - Date.now()) / 86400000));
+  const leaderboard = data.getLeaderboard(donations, players, 1);
   const topFundraiser = leaderboard[0];
   const recent = donations.slice(0, 6);
 
   const cards = [
-    { label: "Team Goal", value: formatCents(settings.teamGoalCents) },
+    { label: "Team Goal", value: formatCents(fundraiser.team_goal_cents) },
     { label: "Total Raised", value: formatCents(teamRaised) },
-    { label: "Estimated Fees", value: formatCents(totalFees) },
-    { label: "Estimated Net Proceeds", value: formatCents(totalNet) },
+    ...(canSeeFinancials
+      ? [
+          { label: "Estimated Fees", value: formatCents(totalFees) },
+          { label: "Estimated Net Proceeds", value: formatCents(totalNet) },
+        ]
+      : []),
     { label: "Total Donations", value: String(succeeded.length) },
     { label: "Average Donation", value: formatCents(avgDonation) },
     { label: "Active Players", value: String(activePlayers.length) },
     { label: "Days Remaining", value: String(daysRemaining) },
   ];
 
-  function handleReset() {
-    if (window.confirm("Reset all prototype data back to the original sample players and donations?")) {
-      resetAll();
-    }
-  }
-
   return (
     <div className="space-y-8">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="font-display text-2xl text-rampage-purple-dark">Dashboard</h1>
-          <p className="text-sm text-rampage-gray">{settings.fundraiserTitle}</p>
-        </div>
-        <button
-          type="button"
-          onClick={handleReset}
-          className="text-xs font-semibold rounded-full border border-red-300 text-red-600 px-4 py-2 hover:bg-red-50 transition focus-ring"
-        >
-          Reset All Prototype Data
-        </button>
+      <div>
+        <h1 className="font-display text-2xl text-rampage-purple-dark">Dashboard</h1>
+        <p className="text-sm text-rampage-gray">{fundraiser.title}</p>
       </div>
 
       <p className="text-xs text-rampage-gray bg-rampage-gray-light border border-black/5 rounded-lg p-3">
-        This prototype's data is stored in your browser (not a server), so it's specific to this device/browser and
-        will reset if you clear site data.
+        Data is stored permanently in Supabase and shared across every device and administrator.
+        {!canSeeFinancials && " Your Manager role doesn't include donor financial details (fees, net proceeds, donor emails)."}
       </p>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -74,7 +72,7 @@ export default function AdminDashboardPage() {
           {topFundraiser ? (
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-semibold text-rampage-charcoal">{topFundraiser.player.displayName}</p>
+                <p className="font-semibold text-rampage-charcoal">{topFundraiser.player.display_name}</p>
                 <Link href={`/admin/players/${topFundraiser.player.id}`} className="text-xs text-rampage-purple hover:underline focus-ring rounded">
                   View player
                 </Link>
@@ -93,16 +91,16 @@ export default function AdminDashboardPage() {
           ) : (
             <ul className="space-y-3">
               {recent.map((d) => {
-                const player = sel.getPlayerById(db, d.playerId);
+                const player = players.find((p) => p.id === d.player_id);
                 return (
                   <li key={d.id} className="flex justify-between text-sm border-b border-black/5 pb-2 last:border-0">
                     <div>
-                      <p className="font-medium text-rampage-charcoal">{player?.displayName || "Unknown player"}</p>
+                      <p className="font-medium text-rampage-charcoal">{player?.display_name || "Unknown player"}</p>
                       <p className="text-xs text-rampage-gray capitalize">
-                        {d.status} · {d.source} · {new Date(d.createdAt).toLocaleDateString()}
+                        {d.status} · {d.source} · {new Date(d.created_at).toLocaleDateString()}
                       </p>
                     </div>
-                    <span className="font-semibold text-rampage-charcoal">{formatCents(d.grossCents)}</span>
+                    <span className="font-semibold text-rampage-charcoal">{formatCents(d.gross_cents)}</span>
                   </li>
                 );
               })}

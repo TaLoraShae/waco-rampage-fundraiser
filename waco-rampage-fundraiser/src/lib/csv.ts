@@ -1,5 +1,4 @@
-import { Database, Donation } from "./types";
-import { getPlayerById } from "./selectors";
+import { FinancialDonation, Player } from "./types";
 
 function csvEscape(value: string | number | boolean) {
   const s = String(value ?? "");
@@ -7,47 +6,19 @@ function csvEscape(value: string | number | boolean) {
   return s;
 }
 
-export function donationsToCsv(db: Database, donations: Donation[]): string {
+export function donationsToCsv(donations: FinancialDonation[], players: Player[]): string {
   const headers = [
-    "Donation ID",
-    "Date",
-    "Player",
-    "Donor Name",
-    "Donor Email",
-    "Anonymous",
-    "Gross (USD)",
-    "Fee Estimate (USD)",
-    "Net Estimate (USD)",
-    "Status",
-    "Source",
-    "Payment Method",
-    "Checkout Session ID",
-    "Payment Intent ID",
-    "Refunded",
-    "Admin Notes",
-    "Donor Message",
+    "Donation ID", "Date", "Player", "Donor Name", "Donor Email", "Anonymous",
+    "Gross (USD)", "Fee Estimate (USD)", "Net Estimate (USD)", "Status", "Source",
+    "Payment Method", "Checkout Session ID", "Payment Intent ID", "Refunded", "Admin Notes", "Donor Message",
   ];
 
   const rows = donations.map((d) => {
-    const player = getPlayerById(db, d.playerId);
+    const player = players.find((p) => p.id === d.player_id);
     return [
-      d.id,
-      d.createdAt,
-      player?.displayName || "",
-      d.donorName,
-      d.donorEmail,
-      d.anonymous,
-      (d.grossCents / 100).toFixed(2),
-      (d.feeCents / 100).toFixed(2),
-      (d.netCents / 100).toFixed(2),
-      d.status,
-      d.source,
-      d.paymentMethod,
-      d.checkoutSessionId,
-      d.paymentIntentId,
-      d.refunded,
-      d.adminNotes,
-      d.donorMessage,
+      d.id, d.created_at, player?.display_name || "", d.donor_name, d.donor_email, d.anonymous,
+      (d.gross_cents / 100).toFixed(2), (d.fee_cents / 100).toFixed(2), (d.net_cents / 100).toFixed(2),
+      d.status, d.source, d.payment_method, d.checkout_session_id, d.payment_intent_id, d.refunded, d.admin_notes, d.donor_message,
     ];
   });
 

@@ -29,29 +29,27 @@ git push -u origin main
    ```env
    PAYMENT_MODE=mock
    NEXT_PUBLIC_SITE_URL=https://your-project.vercel.app
-   ADMIN_DEMO_EMAIL=admin@wacorampage.test
-   ADMIN_DEMO_PASSWORD=RampageDemo2026!
+   NEXT_PUBLIC_SUPABASE_URL=your-supabase-project-url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+   SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
    ```
+
+   See `docs/SUPABASE_ONBOARDING.md` for exactly where to find each of
+   the three Supabase values and how to add them in Vercel's UI.
 
 4. Click **Deploy**.
 
-### Storage on Vercel — already handled
+### Storage — now backed by Supabase
 
-This prototype stores its data (players, donations, sponsors,
-settings) in the **browser** via `localStorage` (see
-`src/lib/store.tsx`), not on the server filesystem. That's
-intentional: Vercel's serverless functions have a read-only,
-ephemeral filesystem, so a server-side file write would disappear
-between requests. Because nothing here writes to disk, the site works
-correctly out of the box once deployed to Vercel — no extra
-configuration needed.
-
-Keep in mind this also means the prototype's data is **per
-browser/device** — donations made on one visitor's phone won't show up
-in the admin dashboard on your laptop. That's fine for reviewing and
-testing the prototype. For a real shared, multi-device dataset, migrate
-to Supabase first (see `docs/SUPABASE_SCHEMA.md`) — only
-`src/lib/store.tsx` needs to change; no page or component does.
+This site's data (players, donations, sponsors, site wording, images)
+lives permanently in your Supabase project, not in browser storage or
+on the server filesystem. That means it's safe to deploy on Vercel's
+serverless infrastructure, and every admin/device/browser sees the
+same shared data. See `docs/SUPABASE_ONBOARDING.md` for the full setup
+walkthrough (creating your project, running the schema, adding
+environment variables, and creating your first owner account) — do
+that **before** deploying, since the site needs those Supabase
+environment variables to build and run correctly.
 
 ## 3. Connect a custom domain
 
@@ -63,8 +61,12 @@ to Supabase first (see `docs/SUPABASE_SCHEMA.md`) — only
 4. Once DNS propagates (a few minutes to a few hours), update
    `NEXT_PUBLIC_SITE_URL` to your real domain and redeploy — this keeps
    every player's QR code pointing at the correct URL automatically.
+5. Add your new domain to Supabase's allowed redirect URLs (Supabase
+   dashboard → Authentication → URL Configuration) so password-reset
+   and invite emails link back to the right place. See
+   `docs/SUPABASE_ONBOARDING.md`.
 
 ## 4. Production launch checklist
 
-See `docs/PRODUCTION_LAUNCH_CHECKLIST.md` for the full pre-launch list,
-and `docs/STRIPE_SETUP.md` for connecting real payments.
+See `docs/CHECKLISTS.md` for the full pre-launch list, and
+`docs/STRIPE_SETUP.md` for connecting real payments.
