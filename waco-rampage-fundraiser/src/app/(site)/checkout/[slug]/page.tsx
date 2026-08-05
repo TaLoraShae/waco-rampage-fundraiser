@@ -20,6 +20,8 @@ export default async function CheckoutPage({
 }) {
   const player = await data.getPlayerBySlug(params.slug);
   if (!player) notFound();
+  const settings = await data.getSiteSettings(player.fundraiser_id);
+  const teamName = settings?.team_name || "Team Fundraiser";
 
   const amountCents = Math.round(Number(searchParams.amountCents || 0));
   const donorName = searchParams.donorName || "";
@@ -34,7 +36,7 @@ export default async function CheckoutPage({
     <div className="mx-auto max-w-lg px-4 sm:px-6 py-12">
       <div className="bg-rampage-charcoal metal-border rounded-2xl overflow-hidden">
         <div className="bg-gradient-to-r from-rampage-purple-deep to-rampage-black px-6 py-5">
-          <p className="text-rampage-purple-light text-xs uppercase tracking-widest font-bold">Waco Rampage 14U</p>
+          <p className="text-rampage-purple-light text-xs uppercase tracking-widest font-bold">{teamName}</p>
           <h1 className="font-display text-2xl text-white">SIMULATED CHECKOUT</h1>
         </div>
 

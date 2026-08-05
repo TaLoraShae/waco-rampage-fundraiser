@@ -431,8 +431,11 @@ begin
       'Help send the Waco Rampage 14U squad to Regionals. Every dollar raised goes directly toward tournament fees, travel, equipment, uniforms, and training.',
       2000000, 60000,
       now(), now() + interval '45 days',
-      'boosterclub@wacorampage.test', '(254) 555-0142',
-      '{"instagram":"https://instagram.com/wacorampage14u","facebook":"https://facebook.com/wacorampage14u","twitter":"https://x.com/wacorampage14u"}'
+      -- Contact info and social links now live in site_settings (see
+      -- section 9 below) and are editable from Admin → Settings.
+      -- These columns are left blank intentionally.
+      '', '',
+      '{}'
     ) returning id into v_fundraiser_id;
 
     insert into site_settings (fundraiser_id, team_name, tagline, footer_text)
@@ -481,3 +484,136 @@ end $$;
 -- docs/SUPABASE_ONBOARDING.md, section "Creating the first owner
 -- account."
 -- =====================================================================
+
+-- =====================================================================
+-- 9. SITE-WIDE BRANDING & CONTACT — dynamic settings migration
+-- ---------------------------------------------------------------------
+-- Adds every remaining site-wide branding/contact/color/image field to
+-- site_settings so the ENTIRE public site (logo, footer logo, contact
+-- email/phone, social links, footer description, privacy/terms links,
+-- copyright text, colors, hero image, team photo, favicon) is editable
+-- by the Owner from the admin dashboard — nothing hard-coded in the
+-- app. Safe to re-run: every statement below is idempotent.
+-- =====================================================================
+
+alter table site_settings add column if not exists footer_logo_url text not null default '';
+alter table site_settings add column if not exists contact_email text not null default '';
+alter table site_settings add column if not exists contact_phone text not null default '';
+alter table site_settings add column if not exists facebook_url text not null default '';
+alter table site_settings add column if not exists instagram_url text not null default '';
+alter table site_settings add column if not exists twitter_url text not null default '';
+alter table site_settings add column if not exists website_url text not null default '';
+alter table site_settings add column if not exists footer_description text not null default '';
+alter table site_settings add column if not exists privacy_policy_url text not null default '';
+alter table site_settings add column if not exists terms_url text not null default '';
+alter table site_settings add column if not exists copyright_text text not null default '';
+alter table site_settings add column if not exists accent_color text not null default '#8A4FC4';
+alter table site_settings add column if not exists team_photo_url text not null default '';
+alter table site_settings add column if not exists favicon_url text not null default '';
+
+-- ---- Migrate existing data from `fundraisers` into `site_settings` so
+-- nothing already entered by an owner is lost. Only fills in blanks —
+-- never overwrites a value an owner has already set in site_settings.
+update site_settings ss
+set contact_email = f.contact_email
+from fundraisers f
+where ss.fundraiser_id = f.id
+  and (ss.contact_email is null or ss.contact_email = '')
+  and f.contact_email is not null and f.contact_email <> '';
+
+update site_settings ss
+set contact_phone = f.contact_phone
+from fundraisers f
+where ss.fundraiser_id = f.id
+  and (ss.contact_phone is null or ss.contact_phone = '')
+  and f.contact_phone is not null and f.contact_phone <> '';
+
+update site_settings ss
+set facebook_url = f.social->>'facebook'
+from fundraisers f
+where ss.fundraiser_id = f.id
+  and (ss.facebook_url is null or ss.facebook_url = '')
+  and coalesce(f.social->>'facebook', '') <> '';
+
+update site_settings ss
+set instagram_url = f.social->>'instagram'
+from fundraisers f
+where ss.fundraiser_id = f.id
+  and (ss.instagram_url is null or ss.instagram_url = '')
+  and coalesce(f.social->>'instagram', '') <> '';
+
+update site_settings ss
+set twitter_url = f.social->>'twitter'
+from fundraisers f
+where ss.fundraiser_id = f.id
+  and (ss.twitter_url is null or ss.twitter_url = '')
+  and coalesce(f.social->>'twitter', '') <> '';
+
+-- ---- footer_text previously held a copyright-style line (see the
+-- seed data in section 8). Migrate it into the new, purpose-built
+-- copyright_text column, then clear footer_text so it's ready to hold
+-- an actual footer description going forward.
+update site_settings
+set copyright_text = footer_text
+where (copyright_text is null or copyright_text = '') and footer_text is not null and footer_text <> '';
+
+update site_settings set footer_text = '';
+
+-- ---- Remove known PLACEHOLDER values so the admin dashboard shows
+-- empty fields (prompting real info) instead of fake sample data.
+-- Only ever clears these exact placeholder strings — any real value
+-- an owner has already entered is left untouched.
+update site_settings set contact_email = '' where contact_email = 'boosterclub@wacorampage.test';
+update site_settings set contact_phone = '' where contact_phone = '(254) 555-0142';
+update site_settings set facebook_url = '' where facebook_url = 'https://facebook.com/wacorampage14u';
+update site_settings set instagram_url = '' where instagram_url = 'https://instagram.com/wacorampage14u';
+update site_settings set twitter_url = '' where twitter_url = 'https://x.com/wacorampage14u';
+update site_settings set copyright_text = '' where copyright_text like '%2026 Waco Rampage 14U Baseball Booster Club%';
+
+-- ---- If copyright_text is still blank, seed a reasonable starting
+-- value using the real team name already on file (not a placeholder —
+-- an editable starting point the owner can change any time).
+update site_settings
+set copyright_text = '© ' || extract(year from now())::text || ' ' || coalesce(nullif(team_name, ''), 'Fundraiser') || '. All rights reserved.'
+where copyright_text = '';
+
+-- ---- ROLE UPDATE: site-wide branding/contact/color/image settings
+-- are now Owner-only (previously Owner + Manager). Fundraiser goal,
+-- dates, and visibility toggles remain Owner + Manager (unchanged) —
+-- see the `fundraisers_admin_write` policy above, which this does not
+-- touch.
+drop policy if exists site_settings_admin_write on site_settings;
+create policy site_settings_admin_write on site_settings for all
+  using (has_role(array['owner']))
+  with check (has_role(array['owner']));
+
+-- ---- STORAGE: the `branding` bucket (logo, footer logo, hero photo,
+-- team photo, favicon) is now Owner-only to upload/replace/delete.
+-- `players`, `sponsors`, and `gallery` remain Owner + Manager.
+drop policy if exists media_admin_insert on storage.objects;
+create policy media_admin_insert on storage.objects for insert
+  with check (
+    (bucket_id = 'branding' and has_role(array['owner']))
+    or (bucket_id in ('players','sponsors','gallery') and has_role(array['owner','manager']))
+  );
+
+drop policy if exists media_admin_update on storage.objects;
+create policy media_admin_update on storage.objects for update
+  using (
+    (bucket_id = 'branding' and has_role(array['owner']))
+    or (bucket_id in ('players','sponsors','gallery') and has_role(array['owner','manager']))
+  );
+
+drop policy if exists media_admin_delete on storage.objects;
+create policy media_admin_delete on storage.objects for delete
+  using (
+    (bucket_id = 'branding' and has_role(array['owner']))
+    or (bucket_id in ('players','sponsors','gallery') and has_role(array['owner','manager']))
+  );
+
+-- =====================================================================
+-- Done. The admin dashboard's Site Wording & Branding page can now
+-- edit every one of these fields — changes appear on the live site
+-- immediately, with no code changes or redeploys.
+-- =====================================================================
+

@@ -10,6 +10,7 @@ import CopyLinkButton from "@/components/CopyLinkButton";
 import ShareButton from "@/components/ShareButton";
 import QrCodeBox from "@/components/QrCodeBox";
 import { brand } from "@/lib/config";
+import { getPaymentMode } from "@/lib/payment-mode";
 
 export default async function PlayerPage({
   params,
@@ -41,6 +42,8 @@ export default async function PlayerPage({
 
   const fundraiser = await data.getFundraiser();
   if (!fundraiser) notFound();
+  const settings = await data.getSiteSettings(fundraiser.id);
+  const teamName = settings?.team_name || "Team Fundraiser";
 
   const [donations, teamDonations] = await Promise.all([
     data.getDonationsForPlayer(player.id),
@@ -64,12 +67,12 @@ export default async function PlayerPage({
             <Image src={player.image_url} alt={`Placeholder photo of ${player.display_name}`} fill sizes="280px" className="object-cover" unoptimized />
           </div>
           <div>
-            <p className="text-rampage-purple-light text-xs font-bold uppercase tracking-widest mb-2">{brand.teamName}</p>
+            <p className="text-rampage-purple-light text-xs font-bold uppercase tracking-widest mb-2">{teamName}</p>
             <h1 className="font-display text-3xl sm:text-4xl text-white mb-3">{player.display_name}</h1>
             <p className="text-white/80 leading-relaxed mb-6 max-w-xl">{player.message}</p>
             <div className="flex flex-wrap gap-3">
               <CopyLinkButton url={playerUrl} className="inline-flex items-center justify-center rounded border border-white/40 text-white text-sm font-semibold px-4 py-2 hover:bg-white/10 transition focus-ring" />
-              <ShareButton url={playerUrl} title={`Support ${player.display_name}`} text={`Support ${player.display_name} with ${brand.teamName}!`} />
+              <ShareButton url={playerUrl} title={`Support ${player.display_name}`} text={`Support ${player.display_name} with ${teamName}!`} />
               <QrCodeBox url={playerUrl} fileName={player.slug} />
             </div>
           </div>
@@ -155,6 +158,7 @@ export default async function PlayerPage({
               minDonationCents={fundraiser.min_donation_cents}
               maxDonationCents={fundraiser.max_donation_cents}
               anonymousAllowed={fundraiser.anonymous_allowed}
+              paymentMode={getPaymentMode()}
             />
           </div>
         </div>

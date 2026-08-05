@@ -3,26 +3,33 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
-import { brand } from "@/lib/config";
 import { LightningBolt } from "./Lightning";
+import { SiteSettings } from "@/lib/types";
 
-export default function SiteHeader() {
+export default function SiteHeader({ settings }: { settings: SiteSettings | null }) {
   const [open, setOpen] = useState(false);
+  const teamName = settings?.team_name || "Team Fundraiser";
+  const logoUrl = settings?.logo_url;
 
   return (
     <header className="sticky top-0 z-40 bg-rampage-black/98 backdrop-blur border-b border-white/10">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 flex items-center justify-between h-20 sm:h-24">
         <Link href="/" className="flex items-center gap-3 focus-ring rounded shrink-0">
-          <div className="relative h-14 w-24 sm:h-16 sm:w-28 shrink-0">
-            <Image
-              src={brand.logoUrl}
-              alt={`${brand.teamName} logo`}
-              fill
-              sizes="120px"
-              className="object-contain object-left"
-              priority
-            />
-          </div>
+          {logoUrl ? (
+            <div className="relative h-14 w-24 sm:h-16 sm:w-28 shrink-0">
+              <Image
+                src={logoUrl}
+                alt={`${teamName} logo`}
+                fill
+                sizes="120px"
+                className="object-contain object-left"
+                priority
+                unoptimized={logoUrl.startsWith("http")}
+              />
+            </div>
+          ) : (
+            <span className="font-display text-white text-xl tracking-wide">{teamName}</span>
+          )}
         </Link>
 
         <nav className="hidden md:flex items-center gap-7 text-sm font-bold tracking-wide text-white/85 uppercase">

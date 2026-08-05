@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { formatCents } from "@/lib/fees";
 
 export default function DonateForm({
@@ -9,29 +9,72 @@ export default function DonateForm({
   minDonationCents,
   maxDonationCents,
   anonymousAllowed,
+  paymentMode,
 }: {
   slug: string;
   suggestedAmountsCents: number[];
   minDonationCents: number;
   maxDonationCents: number;
   anonymousAllowed: boolean;
+  /** "mock" (default) keeps the existing simulated checkout flow untouched.
+   *  "stripe" sends the browser to a real Stripe Checkout Session. */
+  paymentMode?: "mock" | "stripe";
 }) {
   const [selected, setSelected] = useState<number | "custom">(suggestedAmountsCents[0] ?? 2500);
   const [customAmount, setCustomAmount] = useState("");
   const [anonymous, setAnonymous] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
 
   const amountCents =
     selected === "custom" ? Math.round(Number(customAmount || 0) * 100) : selected;
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     if (!amountCents || amountCents < minDonationCents || amountCents > maxDonationCents) {
       e.preventDefault();
       setError(
         `Please choose an amount between ${formatCents(minDonationCents)} and ${formatCents(maxDonationCents)}.`
       );
-    } else {
-      setError(null);
+      return;
+    }
+    setError(null);
+
+    if (paymentMode !== "stripe") {
+      // Mock mode: let the form submit natively (GET) to /checkout/[slug]
+      // exactly as before — nothing changes here.
+      return;
+    }
+
+    e.preventDefault();
+    setSubmitting(true);
+
+    const form = formRef.current;
+    const formData = form ? new FormData(form) : null;
+
+    try {
+      const res = await fetch("/api/checkout/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          slug,
+          amountCents,
+          donorName: formData?.get("donorName") || "",
+          donorEmail: formData?.get("donorEmail") || "",
+          anonymous,
+          donorMessage: formData?.get("donorMessage") || "",
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.url) {
+        setError(data.error || "Something went wrong starting checkout. Please try again.");
+        setSubmitting(false);
+        return;
+      }
+      window.location.href = data.url;
+    } catch {
+      setError("Something went wrong starting checkout. Please try again.");
+      setSubmitting(false);
     }
   }
 
@@ -40,6 +83,7 @@ export default function DonateForm({
 
   return (
     <form
+      ref={formRef}
       action={`/checkout/${slug}`}
       method="get"
       onSubmit={handleSubmit}
@@ -152,9 +196,10 @@ export default function DonateForm({
 
       <button
         type="submit"
-        className="w-full inline-flex items-center justify-center rounded bg-rampage-purple text-white font-bold uppercase tracking-wide py-3.5 hover:bg-rampage-purple-light transition focus-ring"
+        disabled={submitting}
+        className="w-full inline-flex items-center justify-center rounded bg-rampage-purple text-white font-bold uppercase tracking-wide py-3.5 hover:bg-rampage-purple-light transition focus-ring disabled:opacity-50"
       >
-        Continue to Checkout
+        {submitting ? "Starting checkout..." : "Continue to Checkout"}
       </button>
     </form>
   );

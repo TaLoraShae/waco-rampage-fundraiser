@@ -79,6 +79,16 @@ export async function getDonationById(id: string): Promise<PublicDonation | null
   return data as PublicDonation | null;
 }
 
+export async function getDonationByCheckoutSessionId(checkoutSessionId: string): Promise<PublicDonation | null> {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("donations")
+    .select("id, player_id, fundraiser_id, gross_cents, status, source, anonymous, donor_name, donor_message, created_at, refunded")
+    .eq("checkout_session_id", checkoutSessionId)
+    .maybeSingle();
+  return data as PublicDonation | null;
+}
+
 export async function getPlayerById(id: string): Promise<Player | null> {
   const supabase = createClient();
   const { data } = await supabase.from("players").select("*").eq("id", id).maybeSingle();

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { adminSignOut } from "@/app/admin/auth-actions";
-import { brand } from "@/lib/config";
+import * as data from "@/lib/data";
 import { getCurrentAdmin, roleLabel } from "@/lib/adminAuth";
 
 const NAV = [
@@ -9,7 +9,7 @@ const NAV = [
   { href: "/admin/donations", label: "Donations" },
   { href: "/admin/sponsors", label: "Sponsors" },
   { href: "/admin/content", label: "Site Wording" },
-  { href: "/admin/settings", label: "Fundraiser Settings" },
+  { href: "/admin/settings", label: "Settings" },
   { href: "/admin/reports", label: "Reports" },
   { href: "/admin/administrators", label: "Administrators", ownerOnly: true },
   { href: "/admin/audit-log", label: "Audit Log", ownerOnly: true },
@@ -19,12 +19,15 @@ const NAV = [
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const admin = await getCurrentAdmin();
   const nav = NAV.filter((item) => !item.ownerOnly || admin?.role === "owner");
+  const fundraiser = await data.getFundraiser();
+  const settings = fundraiser ? await data.getSiteSettings(fundraiser.id) : null;
+  const teamName = settings?.team_name || "Team Fundraiser";
 
   return (
     <div className="min-h-screen flex bg-rampage-gray-light">
       <aside className="w-60 shrink-0 bg-rampage-charcoal text-white flex flex-col hidden md:flex">
         <div className="px-5 py-6 border-b border-white/10">
-          <p className="text-xs uppercase tracking-widest text-rampage-purple-light font-semibold">{brand.shortName}</p>
+          <p className="text-xs uppercase tracking-widest text-rampage-purple-light font-semibold">{teamName}</p>
           <p className="font-display text-lg">Admin Dashboard</p>
           {admin && (
             <p className="text-xs text-white/50 mt-1">

@@ -6,10 +6,10 @@ const config: Config = {
     extend: {
       colors: {
         rampage: {
-          purple: "#6B2FA0",
-          "purple-light": "#8A4FC4",
-          "purple-dark": "#3B1B5A",
-          "purple-deep": "#1E0E30",
+          purple: "var(--color-primary, #6B2FA0)",
+          "purple-light": "var(--color-accent, #8A4FC4)",
+          "purple-dark": "var(--color-secondary, #1E0E30)",
+          "purple-deep": "color-mix(in srgb, var(--color-secondary, #1E0E30) 65%, black)",
           charcoal: "#18171B",
           black: "#0B0A0D",
           gray: "#9C99A3",

@@ -246,7 +246,8 @@ export async function updateFundraiserSettings(formData: FormData) {
 }
 
 export async function updateSiteSettings(formData: FormData) {
-  const admin = await requireAdmin(["owner", "manager"]);
+  // Site-wide branding, contact info, colors, and images are Owner-only.
+  const admin = await requireAdmin(["owner"]);
   const supabase = createClient();
   const fundraiserId = String(formData.get("fundraiserId") || "");
 
@@ -257,7 +258,18 @@ export async function updateSiteSettings(formData: FormData) {
       tagline: String(formData.get("tagline") || ""),
       primary_color: String(formData.get("primaryColor") || "#6B2FA0"),
       secondary_color: String(formData.get("secondaryColor") || "#1E0E30"),
+      accent_color: String(formData.get("accentColor") || "#8A4FC4"),
       footer_text: String(formData.get("footerText") || ""),
+      contact_email: String(formData.get("contactEmail") || "").trim(),
+      contact_phone: String(formData.get("contactPhone") || "").trim(),
+      facebook_url: String(formData.get("facebookUrl") || "").trim(),
+      instagram_url: String(formData.get("instagramUrl") || "").trim(),
+      twitter_url: String(formData.get("twitterUrl") || "").trim(),
+      website_url: String(formData.get("websiteUrl") || "").trim(),
+      footer_description: String(formData.get("footerDescription") || "").trim(),
+      privacy_policy_url: String(formData.get("privacyPolicyUrl") || "").trim(),
+      terms_url: String(formData.get("termsUrl") || "").trim(),
+      copyright_text: String(formData.get("copyrightText") || "").trim(),
       updated_by: admin.id,
       updated_at: new Date().toISOString(),
     },
@@ -266,7 +278,7 @@ export async function updateSiteSettings(formData: FormData) {
 
   await logAudit(supabase, admin, "branding.updated", "site_settings", fundraiserId);
   revalidatePath("/admin/settings");
-  revalidatePath("/");
+  revalidatePath("/", "layout");
   redirect("/admin/settings?success=updated");
 }
 
@@ -276,17 +288,24 @@ export async function updateSiteSettings(formData: FormData) {
 
 const BUCKET_FOR_TARGET: Record<string, string> = {
   logo: "branding",
+  footer_logo: "branding",
   hero: "branding",
+  team_photo: "branding",
+  favicon: "branding",
   gallery: "gallery",
   player: "players",
   sponsor: "sponsors",
 };
 
+// These targets write to site-wide branding and are Owner-only —
+// matches the `branding` storage bucket's RLS policy.
+const OWNER_ONLY_TARGETS = new Set(["logo", "footer_logo", "hero", "team_photo", "favicon"]);
+
 export async function uploadImage(formData: FormData) {
-  const admin = await requireAdmin(["owner", "manager"]);
+  const target = String(formData.get("target") || "");
+  const admin = await requireAdmin(OWNER_ONLY_TARGETS.has(target) ? ["owner"] : ["owner", "manager"]);
   const supabase = createClient();
 
-  const target = String(formData.get("target") || ""); // 'logo' | 'hero' | 'gallery' | 'player' | 'sponsor'
   const fundraiserId = String(formData.get("fundraiserId") || "");
   const relatedId = String(formData.get("relatedId") || ""); // player id or sponsor id, if applicable
   const file = formData.get("file") as File | null;
@@ -309,8 +328,14 @@ export async function uploadImage(formData: FormData) {
 
   if (target === "logo") {
     await supabase.from("site_settings").update({ logo_url: publicUrl, updated_by: admin.id }).eq("fundraiser_id", fundraiserId);
+  } else if (target === "footer_logo") {
+    await supabase.from("site_settings").update({ footer_logo_url: publicUrl, updated_by: admin.id }).eq("fundraiser_id", fundraiserId);
   } else if (target === "hero") {
     await supabase.from("site_settings").update({ hero_photo_url: publicUrl, updated_by: admin.id }).eq("fundraiser_id", fundraiserId);
+  } else if (target === "team_photo") {
+    await supabase.from("site_settings").update({ team_photo_url: publicUrl, updated_by: admin.id }).eq("fundraiser_id", fundraiserId);
+  } else if (target === "favicon") {
+    await supabase.from("site_settings").update({ favicon_url: publicUrl, updated_by: admin.id }).eq("fundraiser_id", fundraiserId);
   } else if (target === "gallery") {
     const { data: settings } = await supabase.from("site_settings").select("gallery_urls").eq("fundraiser_id", fundraiserId).maybeSingle();
     const gallery = [...(settings?.gallery_urls || []), publicUrl];

@@ -1,9 +1,15 @@
 # Connecting Stripe (for the account owner or treasurer)
 
-This project already contains the Stripe integration code
-(`src/lib/stripe.ts`, `src/app/api/checkout/session/route.ts`,
-`src/app/api/webhooks/stripe/route.ts`). It stays completely inactive
-until you complete the steps below and set `PAYMENT_MODE=stripe`.
+This project contains the live Stripe integration code:
+(`src/lib/stripe.ts`, `src/app/api/checkout/session/route.ts` for
+creating Checkout Sessions, and `src/app/api/stripe-webhook/route.ts`
+for recording confirmed payments). The webhook route verifies and
+processes real Stripe events as soon as they arrive — it does not wait
+for `PAYMENT_MODE=stripe`. What `PAYMENT_MODE` controls is whether the
+Donate buttons create a **real** Checkout Session (`stripe`) or use
+the simulated in-app flow (`mock`). Complete the steps below, then set
+`PAYMENT_MODE=stripe` to switch the Donate buttons over to real Stripe
+Checkout.
 
 ## 1. Create the Stripe account
 
@@ -33,7 +39,7 @@ NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_...   # or pk_test_...
 ## 4. Create the webhook
 
 1. In the Stripe Dashboard, go to **Developers → Webhooks → Add endpoint**.
-2. Endpoint URL: `https://YOUR_DOMAIN/api/webhooks/stripe`
+2. Endpoint URL: `https://YOUR_DOMAIN/api/stripe-webhook`
 3. Select the event: `checkout.session.completed`
 4. After creating it, copy the **Signing secret** (starts with `whsec_`)
    and add it as `STRIPE_WEBHOOK_SECRET` in your environment.
@@ -64,9 +70,11 @@ the fundraiser publicly — confirm:
 
 ## Notes on duplicate protection
 
-The webhook handler checks `checkoutSessionId` against existing
-donation records before inserting a new one, so Stripe's automatic
-webhook retries won't create duplicate donations.
+`checkout_session_id` has a unique constraint in the database. If the
+webhook receives the same event twice (Stripe's automatic retries, or
+a race between deliveries), the second insert fails with a unique
+violation, which the handler treats as "already recorded" and
+acknowledges — no duplicate donation is ever created.
 
 ## Notes on fees
 

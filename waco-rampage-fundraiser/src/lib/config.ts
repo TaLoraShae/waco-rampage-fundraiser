@@ -1,53 +1,19 @@
 // =====================================================================
-// BRANDING CONFIGURATION
-// Edit everything in this file to re-brand the site: no other files
-// should need to change for a logo swap, color change, or wording edit.
+// SITE CONTENT (non-branding)
+// ---------------------------------------------------------------------
+// Everything that's site-wide BRANDING — logo, footer logo, colors,
+// contact info, social links, hero/team photos, favicon, copyright —
+// now lives in Supabase (`site_settings`, editable from Admin →
+// Settings by the Owner). See src/lib/data.ts.
+//
+// This file only holds long-form marketing COPY that isn't part of
+// that request: fund-usage descriptions and FAQ answers. These are
+// also editable from the database via the `site_content` table /
+// Admin → Site Wording page for the hero headline and button labels;
+// the longer blocks below remain simple defaults you can hand-edit.
 // =====================================================================
 
 export const brand = {
-  teamName: "Waco Rampage 14U",
-  shortName: "Rampage 14U",
-  fundraiserHeadline: "Help Fuel the Waco Rampage",
-  tagline: "Every donation gets us closer to the next tournament.",
-
-  // Swap these placeholder paths for real files in /public/images once uploaded.
-  logoUrl: "/images/team-logo.png",
-  heroImageUrl: "/images/hero-placeholder.jpg",
-  galleryImages: [
-    "/images/gallery-1.jpg",
-    "/images/gallery-2.jpg",
-    "/images/gallery-3.jpg",
-    "/images/gallery-4.jpg",
-    "/images/gallery-5.jpg",
-    "/images/gallery-6.jpg",
-  ],
-
-  colors: {
-    primaryPurple: "#5B2A86",
-    purpleDark: "#3B1B5A",
-    purpleDeep: "#2A1240",
-    charcoal: "#1C1B1F",
-    black: "#0E0D10",
-    gray: "#8A8790",
-    grayLight: "#F1EFF4",
-    white: "#FFFFFF",
-    gold: "#D9C25C",
-  },
-
-  contact: {
-    email: "boosterclub@wacorampage.test",
-    phone: "(254) 555-0142",
-  },
-
-  social: {
-    instagram: "https://instagram.com/wacorampage14u",
-    facebook: "https://facebook.com/wacorampage14u",
-    twitter: "https://x.com/wacorampage14u",
-    tiktok: "",
-  },
-
-  footerText: `© ${new Date().getFullYear()} Waco Rampage 14U Baseball Booster Club. All rights reserved.`,
-
   fundUsage: [
     {
       label: "Tournament fees",
@@ -78,7 +44,7 @@ export const brand = {
   faq: [
     {
       q: "Where does my donation go?",
-      a: "100% of net proceeds support Waco Rampage 14U team expenses: tournament fees, travel, equipment, uniforms, training, and operating costs.",
+      a: "100% of net proceeds support the team's expenses: tournament fees, travel, equipment, uniforms, training, and operating costs.",
     },
     {
       q: "Can I choose which player I support?",
@@ -86,7 +52,7 @@ export const brand = {
     },
     {
       q: "Is my donation tax-deductible?",
-      a: "This prototype does not make a tax-deductibility claim. Once the real fundraiser launches, the booster club will state its tax status here.",
+      a: "This prototype does not make a tax-deductibility claim. Contact the booster club directly for current tax status.",
     },
     {
       q: "Can I stay anonymous?",

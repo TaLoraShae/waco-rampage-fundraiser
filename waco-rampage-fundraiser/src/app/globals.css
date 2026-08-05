@@ -73,7 +73,7 @@ body {
 }
 
 .progress-fill {
-  background: linear-gradient(90deg, #6b2fa0, #8a4fc4);
+  background: linear-gradient(90deg, var(--color-primary, #6b2fa0), var(--color-accent, #8a4fc4));
   border-radius: 999px;
   transition: width 0.6s ease;
 }
@@ -83,7 +83,7 @@ body {
 }
 
 .focus-ring:focus-visible {
-  outline: 3px solid #8a4fc4;
+  outline: 3px solid var(--color-accent, #8a4fc4);
   outline-offset: 2px;
 }
 

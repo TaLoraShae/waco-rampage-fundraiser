@@ -79,8 +79,9 @@ export default async function HomePage() {
   }));
 
   const teamPct = progressPercent(teamRaisedCents, fundraiser.team_goal_cents);
-  const logoUrl = settings?.logo_url || brand.logoUrl;
-  const heroPhotoUrl = settings?.hero_photo_url || "/images/hero-team-photo.jpg";
+  const teamName = settings?.team_name || "Team Fundraiser";
+  const logoUrl = settings?.logo_url;
+  const heroPhotoUrl = settings?.hero_photo_url;
 
   return (
     <div>
@@ -89,9 +90,11 @@ export default async function HomePage() {
         <LightningField />
         <div className="relative z-[1] mx-auto max-w-6xl px-4 sm:px-6 py-14 sm:py-20 grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
           <div>
-            <div className="relative h-24 w-44 sm:h-28 sm:w-52 mb-6 -ml-1">
-              <Image src={logoUrl} alt={`${settings?.team_name || brand.teamName} logo`} fill sizes="220px" className="object-contain object-left" priority unoptimized={logoUrl.startsWith("http")} />
-            </div>
+            {logoUrl && (
+              <div className="relative h-24 w-44 sm:h-28 sm:w-52 mb-6 -ml-1">
+                <Image src={logoUrl} alt={`${teamName} logo`} fill sizes="220px" className="object-contain object-left" priority unoptimized={logoUrl.startsWith("http")} />
+              </div>
+            )}
             <p className="text-rampage-purple-light font-bold uppercase tracking-widest text-xs sm:text-sm mb-3">
               {fundraiser.title}
             </p>
@@ -128,16 +131,22 @@ export default async function HomePage() {
           </div>
 
           <div className="relative">
-            <div className="relative w-full max-w-sm mx-auto lg:max-w-none aspect-[3/4] rounded-2xl overflow-hidden metal-border">
-              <Image
-                src={heroPhotoUrl}
-                alt="Waco Rampage 14U players huddled together on the field"
-                fill
-                sizes="(max-width: 1024px) 90vw, 480px"
-                className="object-cover"
-                priority
-                unoptimized={heroPhotoUrl.startsWith("http")}
-              />
+            <div className="relative w-full max-w-sm mx-auto lg:max-w-none aspect-[3/4] rounded-2xl overflow-hidden metal-border bg-black/40 flex items-center justify-center">
+              {heroPhotoUrl ? (
+                <Image
+                  src={heroPhotoUrl}
+                  alt={`${teamName} players on the field`}
+                  fill
+                  sizes="(max-width: 1024px) 90vw, 480px"
+                  className="object-cover"
+                  priority
+                  unoptimized={heroPhotoUrl.startsWith("http")}
+                />
+              ) : (
+                <p className="text-rampage-gray font-display text-sm px-6 text-center">
+                  Hero photo not set — upload one from Admin → Settings
+                </p>
+              )}
               <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
               <div className="absolute inset-0 bg-gradient-to-r from-rampage-purple-deep/30 via-transparent to-transparent" />
             </div>
@@ -249,20 +258,20 @@ export default async function HomePage() {
             <p className="text-rampage-purple-light font-bold uppercase tracking-widest text-xs mb-2">Team photos</p>
             <h2 className="font-display text-3xl sm:text-4xl text-white">GALLERY</h2>
             <p className="text-rampage-gray mt-2 text-sm max-w-lg mx-auto">
-              Admins can upload real gallery photos from Admin → Site Wording.
+              Admins can upload real gallery photos from Admin → Settings.
             </p>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            {(settings?.gallery_urls && settings.gallery_urls.length > 0 ? settings.gallery_urls : brand.galleryImages).map((url, i) => (
-              <div key={i} className="relative aspect-square rounded-xl bg-black/50 metal-border overflow-hidden flex items-center justify-center text-rampage-gray font-display text-sm">
-                {settings?.gallery_urls && settings.gallery_urls.length > 0 ? (
-                  <Image src={url} alt="Team photo" fill className="object-cover" unoptimized />
-                ) : (
-                  "Team Photo Placeholder"
-                )}
-              </div>
-            ))}
-          </div>
+          {settings?.gallery_urls && settings.gallery_urls.length > 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              {settings.gallery_urls.map((url, i) => (
+                <div key={i} className="relative aspect-square rounded-xl bg-black/50 metal-border overflow-hidden">
+                  <Image src={url} alt={`${teamName} team photo`} fill className="object-cover" unoptimized />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-center text-rampage-gray text-sm">No gallery photos uploaded yet.</p>
+          )}
         </div>
       </section>
 

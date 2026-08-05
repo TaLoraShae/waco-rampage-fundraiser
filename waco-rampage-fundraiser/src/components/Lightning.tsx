@@ -14,7 +14,7 @@ export function LightningField() {
         <path
           d="M120 0 L40 190 L110 190 L20 420 L200 150 L120 150 Z"
           fill="none"
-          stroke="#8A4FC4"
+          stroke="var(--color-accent, #8A4FC4)"
           strokeWidth="2"
         />
       </svg>
@@ -22,12 +22,12 @@ export function LightningField() {
         <path
           d="M100 0 L30 150 L90 150 L10 320 L160 120 L95 120 Z"
           fill="none"
-          stroke="#6B2FA0"
+          stroke="var(--color-primary, #6B2FA0)"
           strokeWidth="2"
         />
       </svg>
       <svg width="140" height="240" style={{ top: "30%", left: "38%" }} viewBox="0 0 140 240">
-        <path d="M80 0 L20 110 L70 110 L0 240 L130 90 L75 90 Z" fill="none" stroke="#8A4FC4" strokeWidth="1.5" />
+        <path d="M80 0 L20 110 L70 110 L0 240 L130 90 L75 90 Z" fill="none" stroke="var(--color-accent, #8A4FC4)" strokeWidth="1.5" />
       </svg>
     </div>
   );

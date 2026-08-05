@@ -1,12 +1,16 @@
 import Link from "next/link";
 import { adminSignOut } from "@/app/admin/auth-actions";
-import { brand } from "@/lib/config";
+import * as data from "@/lib/data";
 
-export default function UnauthorizedPage() {
+export default async function UnauthorizedPage() {
+  const fundraiser = await data.getFundraiser();
+  const settings = fundraiser ? await data.getSiteSettings(fundraiser.id) : null;
+  const teamName = settings?.team_name || "Team Fundraiser";
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-rampage-black via-rampage-purple-deep to-rampage-black flex items-center justify-center px-4">
       <div className="w-full max-w-sm bg-white rounded-2xl shadow-card p-8 text-center">
-        <p className="text-xs uppercase tracking-widest text-rampage-purple font-semibold mb-1">{brand.teamName}</p>
+        <p className="text-xs uppercase tracking-widest text-rampage-purple font-semibold mb-1">{teamName}</p>
         <h1 className="font-display text-2xl text-rampage-purple-dark mb-3">Access Not Approved</h1>
         <p className="text-sm text-rampage-gray mb-6">
           You're signed in, but this account isn't set up as an approved administrator yet. Ask your team owner to
