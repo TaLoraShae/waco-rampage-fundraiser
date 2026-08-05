@@ -285,6 +285,11 @@ export async function updateSiteSettings(formData: FormData) {
 // ---------------------------------------------------------------------
 // Image uploads (Supabase Storage)
 // ---------------------------------------------------------------------
+// Fully automatic: the file goes straight into a public Storage
+// bucket, the resulting public URL is written into the right column
+// on site_settings (or players/sponsors) immediately, and the page is
+// revalidated so the new image shows up on the live site on next
+// load — no manual copying of a Storage URL into any table.
 
 const BUCKET_FOR_TARGET: Record<string, string> = {
   logo: "branding",
@@ -301,6 +306,15 @@ const BUCKET_FOR_TARGET: Record<string, string> = {
 // matches the `branding` storage bucket's RLS policy.
 const OWNER_ONLY_TARGETS = new Set(["logo", "footer_logo", "hero", "team_photo", "favicon"]);
 
+// Where each upload target's form lives, so a player-photo or
+// sponsor-logo upload lands the admin back on that record instead of
+// always bouncing to /admin/settings.
+function defaultRedirectFor(target: string, relatedId: string): string {
+  if (target === "player" && relatedId) return `/admin/players/${relatedId}`;
+  if (target === "sponsor") return "/admin/sponsors";
+  return "/admin/settings";
+}
+
 export async function uploadImage(formData: FormData) {
   const target = String(formData.get("target") || "");
   const admin = await requireAdmin(OWNER_ONLY_TARGETS.has(target) ? ["owner"] : ["owner", "manager"]);
@@ -309,49 +323,90 @@ export async function uploadImage(formData: FormData) {
   const fundraiserId = String(formData.get("fundraiserId") || "");
   const relatedId = String(formData.get("relatedId") || ""); // player id or sponsor id, if applicable
   const file = formData.get("file") as File | null;
+  const redirectTo = String(formData.get("redirectTo") || "") || defaultRedirectFor(target, relatedId);
 
   const bucket = BUCKET_FOR_TARGET[target];
-  if (!bucket || !file || file.size === 0) redirect("/admin/settings?error=upload-failed");
+  if (!bucket || !file || file.size === 0) {
+    redirect(`${redirectTo}${redirectTo.includes("?") ? "&" : "?"}error=upload-failed`);
+  }
 
-  const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
-  const path = `${target}/${relatedId || fundraiserId}-${Date.now()}.${ext}`;
+  const safeExt = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+  const path = `${target}/${relatedId || fundraiserId}-${Date.now()}.${safeExt}`;
   const bytes = new Uint8Array(await file.arrayBuffer());
 
   const { error: uploadError } = await supabase.storage.from(bucket).upload(path, bytes, {
     contentType: file.type || "image/jpeg",
     upsert: true,
   });
-  if (uploadError) redirect("/admin/settings?error=upload-failed");
+  if (uploadError) {
+    console.error("uploadImage: storage upload failed", uploadError);
+    redirect(`${redirectTo}${redirectTo.includes("?") ? "&" : "?"}error=upload-failed`);
+  }
 
+  // Public bucket (see docs/SUPABASE_SETUP.sql) — this URL is
+  // permanent and directly usable, no signing step needed.
   const { data: publicUrlData } = supabase.storage.from(bucket).getPublicUrl(path);
   const publicUrl = publicUrlData.publicUrl;
 
-  if (target === "logo") {
-    await supabase.from("site_settings").update({ logo_url: publicUrl, updated_by: admin.id }).eq("fundraiser_id", fundraiserId);
-  } else if (target === "footer_logo") {
-    await supabase.from("site_settings").update({ footer_logo_url: publicUrl, updated_by: admin.id }).eq("fundraiser_id", fundraiserId);
-  } else if (target === "hero") {
-    await supabase.from("site_settings").update({ hero_photo_url: publicUrl, updated_by: admin.id }).eq("fundraiser_id", fundraiserId);
-  } else if (target === "team_photo") {
-    await supabase.from("site_settings").update({ team_photo_url: publicUrl, updated_by: admin.id }).eq("fundraiser_id", fundraiserId);
-  } else if (target === "favicon") {
-    await supabase.from("site_settings").update({ favicon_url: publicUrl, updated_by: admin.id }).eq("fundraiser_id", fundraiserId);
+  const siteSettingsColumn: Record<string, string> = {
+    logo: "logo_url",
+    footer_logo: "footer_logo_url",
+    hero: "hero_photo_url",
+    team_photo: "team_photo_url",
+    favicon: "favicon_url",
+  };
+
+  let dbError: { message: string } | null = null;
+
+  if (siteSettingsColumn[target]) {
+    // Upsert (not update) so the URL is saved even if this fundraiser
+    // doesn't have a site_settings row yet — a plain UPDATE would
+    // silently affect zero rows and the upload would appear to
+    // "succeed" without ever actually being used on the site.
+    const { error } = await supabase
+      .from("site_settings")
+      .upsert(
+        { fundraiser_id: fundraiserId, [siteSettingsColumn[target]]: publicUrl, updated_by: admin.id, updated_at: new Date().toISOString() },
+        { onConflict: "fundraiser_id" }
+      );
+    dbError = error;
   } else if (target === "gallery") {
     const { data: settings } = await supabase.from("site_settings").select("gallery_urls").eq("fundraiser_id", fundraiserId).maybeSingle();
     const gallery = [...(settings?.gallery_urls || []), publicUrl];
-    await supabase.from("site_settings").update({ gallery_urls: gallery, updated_by: admin.id }).eq("fundraiser_id", fundraiserId);
+    const { error } = await supabase
+      .from("site_settings")
+      .upsert(
+        { fundraiser_id: fundraiserId, gallery_urls: gallery, updated_by: admin.id, updated_at: new Date().toISOString() },
+        { onConflict: "fundraiser_id" }
+      );
+    dbError = error;
   } else if (target === "player" && relatedId) {
-    await supabase.from("players").update({ image_url: publicUrl }).eq("id", relatedId);
+    const { error } = await supabase.from("players").update({ image_url: publicUrl }).eq("id", relatedId);
+    dbError = error;
   } else if (target === "sponsor" && relatedId) {
-    await supabase.from("sponsors").update({ logo_url: publicUrl }).eq("id", relatedId);
+    const { error } = await supabase.from("sponsors").update({ logo_url: publicUrl }).eq("id", relatedId);
+    dbError = error;
+  }
+
+  if (dbError) {
+    console.error("uploadImage: failed to save URL to database", dbError);
+    redirect(`${redirectTo}${redirectTo.includes("?") ? "&" : "?"}error=upload-save-failed`);
   }
 
   await logAudit(supabase, admin, "image.uploaded", target, relatedId || fundraiserId, { path, publicUrl });
+
+  // Public pages are dynamically rendered per request (no ISR/caching
+  // layer in front of them), so the new image is already "live" as
+  // soon as this action returns — these revalidations are a belt-
+  // and-suspenders refresh of any cached RSC payloads, not what makes
+  // it show up.
   revalidatePath("/admin/settings");
   revalidatePath("/admin/players");
+  revalidatePath("/admin/players/[id]", "page");
   revalidatePath("/admin/sponsors");
-  revalidatePath("/");
-  redirect("/admin/settings?success=updated");
+  revalidatePath("/", "layout");
+
+  redirect(`${redirectTo}${redirectTo.includes("?") ? "&" : "?"}success=updated`);
 }
 
 // ---------------------------------------------------------------------

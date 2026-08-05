@@ -1,7 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import * as data from "@/lib/data";
-import { brand } from "@/lib/config";
 import { formatCents } from "@/lib/fees";
 import ProgressBar, { progressPercent } from "@/components/ProgressBar";
 import CountdownTimer from "@/components/CountdownTimer";
@@ -9,13 +8,6 @@ import PlayerDirectory, { DirectoryEntry } from "@/components/PlayerDirectory";
 import Leaderboard from "@/components/Leaderboard";
 import { LightningBolt, LightningField } from "@/components/Lightning";
 import { getPlayerUrl } from "@/lib/qrcode";
-
-const TEAM_VALUES = [
-  { label: "COMPETE", body: "We play hard and represent Waco.", icon: "plate" },
-  { label: "DEVELOP", body: "We train, learn, and get better every day.", icon: "ball" },
-  { label: "FAMILY", body: "We're more than a team. We're a family.", icon: "people" },
-  { label: "TOGETHER", body: "We bring the energy. We bring the fight. We are Rampage.", icon: "bolt" },
-];
 
 function ValueIcon({ icon }: { icon: string }) {
   const cls = "h-6 w-6 text-white";
@@ -46,6 +38,8 @@ function ValueIcon({ icon }: { icon: string }) {
   return <LightningBolt className={cls} />;
 }
 
+const VALUE_ICONS = ["plate", "ball", "people", "bolt"];
+
 export default async function HomePage() {
   const fundraiser = await data.getFundraiser();
   if (!fundraiser) {
@@ -60,12 +54,19 @@ export default async function HomePage() {
     );
   }
 
-  const [settings, players, sponsors, donations] = await Promise.all([
+  const [settings, players, sponsors, donations, contentItems] = await Promise.all([
     data.getSiteSettings(fundraiser.id),
     data.getPlayers(fundraiser.id),
     data.getSponsors(fundraiser.id),
     data.getDonationsForFundraiser(fundraiser.id),
+    data.getSiteContent(fundraiser.id),
   ]);
+  const content = data.contentMap(contentItems);
+  // c() reads a site_content value, falling back to sensible default UI
+  // copy if the row is blank/missing — structural text always renders
+  // something; it only ever comes from Supabase or this fallback, never
+  // a separate hard-coded source elsewhere in the component.
+  const c = (key: string, fallback: string) => content[key] || fallback;
 
   const directoryPlayers = data.getDirectoryPlayers(players);
   const generalFund = data.getGeneralFundPlayer(players);
@@ -83,6 +84,27 @@ export default async function HomePage() {
   const logoUrl = settings?.logo_url;
   const heroPhotoUrl = settings?.hero_photo_url;
 
+  const fundUsageItems = [1, 2, 3, 4, 5, 6]
+    .map((i) => ({
+      label: content[`fund_usage.item${i}_label`] || "",
+      description: content[`fund_usage.item${i}_description`] || "",
+    }))
+    .filter((item) => item.label);
+
+  const faqItems = [1, 2, 3, 4, 5]
+    .map((i) => ({ q: content[`faq.q${i}`] || "", a: content[`faq.a${i}`] || "" }))
+    .filter((item) => item.q);
+
+  const teamValues = [1, 2, 3, 4]
+    .map((i, idx) => ({
+      label: content[`team_values.value${i}_label`] || "",
+      body: content[`team_values.value${i}_body`] || "",
+      icon: VALUE_ICONS[idx],
+    }))
+    .filter((v) => v.label);
+
+  const privacyStatement = content["legal.privacy_statement"];
+
   return (
     <div>
       {/* HERO */}
@@ -99,9 +121,11 @@ export default async function HomePage() {
               {fundraiser.title}
             </p>
             <h1 className="leading-[0.95] mb-5">
-              <span className="block font-display text-4xl sm:text-5xl lg:text-6xl text-white">HELP FUEL THE</span>
+              <span className="block font-display text-4xl sm:text-5xl lg:text-6xl text-white">
+                {c("hero.headline_line1", "HELP FUEL THE")}
+              </span>
               <span className="block font-brush text-5xl sm:text-6xl lg:text-7xl text-rampage-purple-light drop-shadow-[0_0_18px_rgba(138,79,196,0.5)]">
-                Waco Rampage
+                {c("hero.headline_line2", teamName)}
               </span>
             </h1>
             <p className="text-white/75 max-w-md mb-8 leading-relaxed">{fundraiser.description}</p>
@@ -113,21 +137,23 @@ export default async function HomePage() {
                   className="inline-flex items-center gap-2 justify-center rounded bg-rampage-purple text-white font-bold uppercase tracking-wide px-7 py-3.5 hover:bg-rampage-purple-light transition focus-ring text-sm sm:text-base shadow-glow"
                 >
                   <LightningBolt className="h-4 w-4" />
-                  Donate to the Team Fund
+                  {c("buttons.donate_team", "Donate to the Team Fund")}
                 </Link>
               )}
               <a
                 href="#players"
                 className="inline-flex items-center justify-center rounded border-2 border-white/40 text-white font-bold uppercase tracking-wide px-7 py-3.5 hover:bg-white/10 transition focus-ring text-sm sm:text-base"
               >
-                Support a Player
+                {c("buttons.support_player", "Support a Player")}
               </a>
             </div>
 
             <CountdownTimer endDate={fundraiser.end_date} />
-            <p className="mt-4 text-white/60 text-sm italic">
-              Tournament season starts soon. <span className="text-rampage-purple-light not-italic font-semibold">Let&rsquo;s finish strong.</span>
-            </p>
+            {content["hero.season_note"] !== "" && (
+              <p className="mt-4 text-white/60 text-sm italic">
+                {c("hero.season_note", "Tournament season starts soon. Let's finish strong.")}
+              </p>
+            )}
           </div>
 
           <div className="relative">
@@ -144,7 +170,7 @@ export default async function HomePage() {
                 />
               ) : (
                 <p className="text-rampage-gray font-display text-sm px-6 text-center">
-                  Hero photo not set — upload one from Admin → Settings
+                  Hero photo not set yet
                 </p>
               )}
               <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
@@ -153,7 +179,7 @@ export default async function HomePage() {
 
             <div className="mt-6 lg:mt-0 lg:absolute lg:-bottom-6 lg:-left-10 lg:w-[340px] bg-rampage-black/95 metal-border rounded-2xl p-6 shadow-card">
               <p className="text-rampage-purple-light text-xs font-bold uppercase tracking-widest mb-1">
-                Team Goal Progress
+                {c("hero.team_progress_heading", "Team Goal Progress")}
               </p>
               <p className="font-display text-white text-3xl mb-3">
                 {formatCents(teamRaisedCents)}{" "}
@@ -169,9 +195,14 @@ export default async function HomePage() {
                   <ValueIcon icon="people" />
                 </div>
                 <div>
-                  <p className="text-white text-sm font-bold uppercase tracking-wide">Together We Rampage</p>
+                  <p className="text-white text-sm font-bold uppercase tracking-wide">
+                    {c("hero.support_message_heading", "Together We Rampage")}
+                  </p>
                   <p className="text-rampage-gray text-xs mt-0.5">
-                    Your support helps these young athletes compete, grow, and represent Waco with pride.
+                    {c(
+                      "hero.together_body",
+                      "Your support helps these young athletes compete, grow, and represent Waco with pride."
+                    )}
                   </p>
                 </div>
               </div>
@@ -179,29 +210,33 @@ export default async function HomePage() {
           </div>
         </div>
 
-        <div className="relative z-[1] border-t border-white/10 bg-black/40">
-          <div className="mx-auto max-w-6xl px-4 sm:px-6 py-6 grid grid-cols-2 sm:grid-cols-4 gap-6 items-start">
-            {TEAM_VALUES.map((v) => (
-              <div key={v.label} className="flex items-start gap-3">
-                <div className="h-10 w-10 shrink-0 rounded bg-rampage-purple/25 flex items-center justify-center">
-                  <ValueIcon icon={v.icon} />
+        {teamValues.length > 0 && (
+          <div className="relative z-[1] border-t border-white/10 bg-black/40">
+            <div className="mx-auto max-w-6xl px-4 sm:px-6 py-6 grid grid-cols-2 sm:grid-cols-4 gap-6 items-start">
+              {teamValues.map((v) => (
+                <div key={v.label} className="flex items-start gap-3">
+                  <div className="h-10 w-10 shrink-0 rounded bg-rampage-purple/25 flex items-center justify-center">
+                    <ValueIcon icon={v.icon} />
+                  </div>
+                  <div>
+                    <p className="font-display text-white text-sm tracking-wide">{v.label}</p>
+                    {v.body && <p className="text-rampage-gray text-xs leading-snug mt-0.5">{v.body}</p>}
+                  </div>
                 </div>
-                <div>
-                  <p className="font-display text-white text-sm tracking-wide">{v.label}</p>
-                  <p className="text-rampage-gray text-xs leading-snug mt-0.5">{v.body}</p>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </section>
 
       {fundraiser.leaderboard_visible && <Leaderboard entries={leaderboard} />}
 
       <section id="players" className="mx-auto max-w-6xl px-4 sm:px-6 py-16">
         <div className="text-center mb-10">
-          <p className="text-rampage-purple-light font-bold uppercase tracking-widest text-xs mb-2">Meet the Team</p>
-          <h2 className="font-display text-3xl sm:text-4xl text-white">PLAYER DIRECTORY</h2>
+          <p className="text-rampage-purple-light font-bold uppercase tracking-widest text-xs mb-2">
+            {c("headings.players_eyebrow", "Meet the Team")}
+          </p>
+          <h2 className="font-display text-3xl sm:text-4xl text-white">{c("headings.players_heading", "PLAYER DIRECTORY")}</h2>
           <p className="text-rampage-gray mt-2 max-w-xl mx-auto">
             Find your player, share their link, and help them reach their goal.
           </p>
@@ -209,28 +244,36 @@ export default async function HomePage() {
         <PlayerDirectory entries={entries} />
       </section>
 
-      <section className="bg-rampage-charcoal texture-grain border-y border-white/10">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 py-16">
-          <div className="text-center mb-10">
-            <p className="text-rampage-purple-light font-bold uppercase tracking-widest text-xs mb-2">Where it goes</p>
-            <h2 className="font-display text-3xl sm:text-4xl text-white">HOW FUNDS WILL BE USED</h2>
+      {fundUsageItems.length > 0 && (
+        <section className="bg-rampage-charcoal texture-grain border-y border-white/10">
+          <div className="mx-auto max-w-6xl px-4 sm:px-6 py-16">
+            <div className="text-center mb-10">
+              <p className="text-rampage-purple-light font-bold uppercase tracking-widest text-xs mb-2">
+                {c("headings.fund_usage_eyebrow", "Where it goes")}
+              </p>
+              <h2 className="font-display text-3xl sm:text-4xl text-white">
+                {c("headings.fund_usage_heading", "HOW FUNDS WILL BE USED")}
+              </h2>
+            </div>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {fundUsageItems.map((item) => (
+                <div key={item.label} className="rounded-2xl bg-black/50 metal-border p-6">
+                  <p className="font-display text-rampage-purple-light text-lg mb-2 tracking-wide">{item.label}</p>
+                  {item.description && <p className="text-white/70 text-sm leading-relaxed">{item.description}</p>}
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {brand.fundUsage.map((item) => (
-              <div key={item.label} className="rounded-2xl bg-black/50 metal-border p-6">
-                <p className="font-display text-rampage-purple-light text-lg mb-2 tracking-wide">{item.label}</p>
-                <p className="text-white/70 text-sm leading-relaxed">{item.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {sponsors.length > 0 && (
         <section className="mx-auto max-w-6xl px-4 sm:px-6 py-16">
           <div className="text-center mb-10">
-            <p className="text-rampage-purple-light font-bold uppercase tracking-widest text-xs mb-2">With gratitude</p>
-            <h2 className="font-display text-3xl sm:text-4xl text-white">OUR SPONSORS</h2>
+            <p className="text-rampage-purple-light font-bold uppercase tracking-widest text-xs mb-2">
+              {c("headings.sponsors_eyebrow", "With gratitude")}
+            </p>
+            <h2 className="font-display text-3xl sm:text-4xl text-white">{c("headings.sponsors_heading", "OUR SPONSORS")}</h2>
           </div>
           <div className="grid gap-6 sm:grid-cols-3">
             {sponsors.map((sp) => (
@@ -255,11 +298,10 @@ export default async function HomePage() {
       <section className="bg-rampage-charcoal texture-grain border-y border-white/10">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 py-16">
           <div className="text-center mb-10">
-            <p className="text-rampage-purple-light font-bold uppercase tracking-widest text-xs mb-2">Team photos</p>
-            <h2 className="font-display text-3xl sm:text-4xl text-white">GALLERY</h2>
-            <p className="text-rampage-gray mt-2 text-sm max-w-lg mx-auto">
-              Admins can upload real gallery photos from Admin → Settings.
+            <p className="text-rampage-purple-light font-bold uppercase tracking-widest text-xs mb-2">
+              {c("headings.gallery_eyebrow", "Team photos")}
             </p>
+            <h2 className="font-display text-3xl sm:text-4xl text-white">{c("headings.gallery_heading", "GALLERY")}</h2>
           </div>
           {settings?.gallery_urls && settings.gallery_urls.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
@@ -275,30 +317,38 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section id="faq" className="mx-auto max-w-3xl px-4 sm:px-6 py-16">
-        <div className="text-center mb-10">
-          <p className="text-rampage-purple-light font-bold uppercase tracking-widest text-xs mb-2">Questions</p>
-          <h2 className="font-display text-3xl sm:text-4xl text-white">FREQUENTLY ASKED QUESTIONS</h2>
-        </div>
-        <div className="space-y-3">
-          {brand.faq.map((item) => (
-            <details key={item.q} className="group rounded-xl bg-rampage-charcoal metal-border p-5">
-              <summary className="cursor-pointer font-semibold text-white focus-ring rounded list-none flex justify-between items-center">
-                {item.q}
-                <span className="text-rampage-purple-light group-open:rotate-45 transition">+</span>
-              </summary>
-              <p className="text-rampage-gray text-sm mt-3 leading-relaxed">{item.a}</p>
-            </details>
-          ))}
-        </div>
-      </section>
+      {faqItems.length > 0 && (
+        <section id="faq" className="mx-auto max-w-3xl px-4 sm:px-6 py-16">
+          <div className="text-center mb-10">
+            <p className="text-rampage-purple-light font-bold uppercase tracking-widest text-xs mb-2">
+              {c("headings.faq_eyebrow", "Questions")}
+            </p>
+            <h2 className="font-display text-3xl sm:text-4xl text-white">
+              {c("headings.faq_heading", "FREQUENTLY ASKED QUESTIONS")}
+            </h2>
+          </div>
+          <div className="space-y-3">
+            {faqItems.map((item) => (
+              <details key={item.q} className="group rounded-xl bg-rampage-charcoal metal-border p-5">
+                <summary className="cursor-pointer font-semibold text-white focus-ring rounded list-none flex justify-between items-center">
+                  {item.q}
+                  <span className="text-rampage-purple-light group-open:rotate-45 transition">+</span>
+                </summary>
+                {item.a && <p className="text-rampage-gray text-sm mt-3 leading-relaxed">{item.a}</p>}
+              </details>
+            ))}
+          </div>
+        </section>
+      )}
 
-      <section className="mx-auto max-w-3xl px-4 sm:px-6 pb-16">
-        <div className="rounded-2xl bg-rampage-charcoal metal-border p-6 text-sm text-rampage-gray leading-relaxed">
-          <p className="font-semibold text-white mb-2">A note on player privacy</p>
-          <p>{brand.privacyStatement}</p>
-        </div>
-      </section>
+      {privacyStatement && (
+        <section className="mx-auto max-w-3xl px-4 sm:px-6 pb-16">
+          <div className="rounded-2xl bg-rampage-charcoal metal-border p-6 text-sm text-rampage-gray leading-relaxed">
+            <p className="font-semibold text-white mb-2">{c("headings.privacy_note_heading", "A note on player privacy")}</p>
+            <p>{privacyStatement}</p>
+          </div>
+        </section>
+      )}
     </div>
   );
 }

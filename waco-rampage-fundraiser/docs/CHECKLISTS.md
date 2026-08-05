@@ -5,7 +5,7 @@ connected to real money.
 
 - [ ] Review the homepage layout and branding
 - [ ] Review the purple/white/charcoal color scheme
-- [ ] Replace the logo placeholder (`public/images/team-logo.png`, path set in `src/lib/config.ts`)
+- [ ] Upload a real logo (Supabase Table Editor → `site_settings.logo_url`, or the Storage `branding` bucket)
 - [ ] Replace team/gallery photo placeholders
 - [ ] Review an individual player page
 - [ ] Test a player's custom link (`/support/[slug]`)
@@ -13,7 +13,7 @@ connected to real money.
 - [ ] Test a mock donation: succeeded, failed, and canceled
 - [ ] Review the admin dashboard summary
 - [ ] Review admin reports and CSV export
-- [ ] Approve or edit the fundraiser wording (`src/lib/config.ts`, `/admin/settings`)
+- [ ] Approve or edit wording (Supabase Table Editor → `site_content` — see docs/CONTENT_FIELD_MAP.md)
 
 Reset test data any time from the admin dashboard: open **Admin →
 Dashboard** and click **Reset All Prototype Data**, or clear this

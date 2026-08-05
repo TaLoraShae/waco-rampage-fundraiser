@@ -3,7 +3,7 @@ import { requireAdmin } from "@/lib/adminAuth";
 import * as data from "@/lib/data";
 import { createSponsor, deleteSponsorAction, uploadImage } from "@/app/admin/data-actions";
 
-export default async function AdminSponsorsPage({ searchParams }: { searchParams: { success?: string } }) {
+export default async function AdminSponsorsPage({ searchParams }: { searchParams: { success?: string; error?: string } }) {
   await requireAdmin(["owner", "manager"]);
 
   const fundraiser = await data.getFundraiser();
@@ -15,6 +15,9 @@ export default async function AdminSponsorsPage({ searchParams }: { searchParams
     <div className="space-y-6">
       <h1 className="font-display text-2xl text-rampage-purple-dark">Sponsor Management</h1>
       {searchParams.success && <p className="text-sm rounded-lg bg-green-50 border border-green-200 text-green-700 p-3">Saved.</p>}
+      {(searchParams.error === "upload-failed" || searchParams.error === "upload-save-failed") && (
+        <p className="text-sm rounded-lg bg-red-50 border border-red-200 text-red-700 p-3">Logo upload failed. Check the file and try again.</p>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
         <div className="bg-white rounded-2xl border border-black/5 shadow-card-light overflow-hidden">

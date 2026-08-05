@@ -22,7 +22,7 @@ export default async function AdminSettingsPage({ searchParams }: { searchParams
       <h1 className="font-display text-2xl text-rampage-purple-dark">Settings</h1>
 
       {searchParams.success && <p className="text-sm rounded-lg bg-green-50 border border-green-200 text-green-700 p-3">Settings updated.</p>}
-      {searchParams.error === "upload-failed" && <p className="text-sm rounded-lg bg-red-50 border border-red-200 text-red-700 p-3">Image upload failed. Check the file and try again.</p>}
+      {searchParams.error === "upload-failed" || searchParams.error === "upload-save-failed" ? <p className="text-sm rounded-lg bg-red-50 border border-red-200 text-red-700 p-3">Image upload failed. Check the file and try again.</p> : null}
 
       {/* ---- Fundraiser goal, dates, donation limits — Owner + Manager ---- */}
       <form action={updateFundraiserSettings} className="bg-white rounded-2xl border border-black/5 shadow-card-light p-6 space-y-5">

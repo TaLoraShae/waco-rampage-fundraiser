@@ -75,22 +75,27 @@ site will run, since it requires Supabase environment variables.
   enforced by Supabase Row Level Security, not just app code. See
   `docs/SUPABASE_SETUP.sql`.
 
-## Editing branding and wording
+## Editing branding, contact info, and wording
 
-Almost everything you'd want to re-brand lives in one file:
+Nothing is hard-coded. Everything editable lives in Supabase and can
+be changed directly in **Supabase → Table Editor** — no code changes,
+no redeploy:
 
-```
-src/lib/config.ts
-```
+- **Branding, contact info, colors, images** → `site_settings` table
+- **Homepage/player-page wording, headings, buttons, FAQ, fund-usage
+  copy, privacy statement** → `site_content` table (matched by
+  `section` + `key`)
+- **Fundraiser goal, dates, donation limits** → `fundraisers` table
 
-Team name, tagline, logo path, colors, contact info, social links,
-fund-usage copy, and FAQ all live there. Fundraiser goals, dates, and
-visibility toggles are editable from `/admin/settings` instead.
+See `docs/CONTENT_FIELD_MAP.md` for the exact table/column/key that
+controls every item on the public site, and
+`docs/SUPABASE_MIGRATION_CONTENT.sql` for the safe, additive-only
+migration that adds the `site_content` rows above (if you haven't run
+it yet).
 
-To replace the logo and team photos, drop your files into
-`public/images/` and update the paths in `src/lib/config.ts` (defaults
-point at `team-logo.png`, `hero-placeholder.jpg`, and `gallery-1.jpg`
-through `gallery-6.jpg`).
+Logos, hero photos, team photos, and gallery images upload through
+Admin → Settings into Supabase Storage; everything else is edited
+straight in the Table Editor.
 
 ## Project structure
 
@@ -98,24 +103,24 @@ through `gallery-6.jpg`).
 src/
   app/
     (site)/            Public pages: homepage, player pages, checkout, thank-you, privacy
-    admin/              Password-protected admin dashboard
-    api/                 Route handlers (CSV export, future Stripe routes)
-    actions.ts           Server actions: donation flow + all admin mutations
+    admin/              Real Supabase Auth admin dashboard (owner/treasurer/manager roles)
+    api/                 checkout/session (Stripe Checkout) + stripe-webhook (live payment recording)
     globals.css
   components/            Shared UI components
     admin/                Admin-only form components
   lib/
-    store.tsx              Client-side data store (React Context + localStorage) — the ONLY place data is mutated
-    selectors.ts             Pure read helpers (getPlayers, getLeaderboard, etc.) operating on store state
-    seedData.ts                Sample players/donations/sponsors, used to seed the store
-    types.ts                Shared TypeScript types (mirrors the proposed Supabase schema)
-    config.ts                Branding configuration
-    fees.ts                    Stripe fee estimator
-    payment-mode.ts             Reads PAYMENT_MODE
-    stripe.ts                    Future Stripe client (inert until PAYMENT_MODE=stripe)
-    qrcode.ts                     QR code generation (no external service)
-    auth.ts                        Prototype admin auth
-  middleware.ts            Protects /admin routes
+    supabase/               Browser/server/middleware/anon Supabase clients
+    data.ts                   Public/shared reads (RLS-aware — safe for both visitors and admins)
+    adminData.ts                Admin-only reads (financial donations view, administrators, audit log)
+    adminAuth.ts                  requireAdmin()/getCurrentAdmin() — server-side role checks
+    auditLog.ts                     Writes to the audit_logs table
+    types.ts                    Shared TypeScript types (mirrors docs/SUPABASE_SETUP.sql column-for-column)
+    fees.ts                       Stripe fee estimator
+    payment-mode.ts                 Reads PAYMENT_MODE
+    stripe.ts                         Stripe client used by checkout/session and stripe-webhook
+    qrcode.ts                           QR code generation (no external service)
+    csv.ts                                Client-side CSV export for donation reports
+  middleware.ts            Protects /admin routes: checks Supabase session AND administrators table
 docs/
   SUPABASE_SETUP.sql            Full schema: tables, RLS policies, storage buckets, seed data
   SUPABASE_ONBOARDING.md          Click-by-click Supabase setup, env vars, first owner account, invites

@@ -9,7 +9,6 @@ import DonateForm from "@/components/DonateForm";
 import CopyLinkButton from "@/components/CopyLinkButton";
 import ShareButton from "@/components/ShareButton";
 import QrCodeBox from "@/components/QrCodeBox";
-import { brand } from "@/lib/config";
 import { getPaymentMode } from "@/lib/payment-mode";
 
 export default async function PlayerPage({
@@ -49,6 +48,16 @@ export default async function PlayerPage({
     data.getDonationsForPlayer(player.id),
     data.getDonationsForFundraiser(fundraiser.id),
   ]);
+  const contentItems = await data.getSiteContent(fundraiser.id);
+  const content = data.contentMap(contentItems);
+  const c = (key: string, fallback: string) => content[key] || fallback;
+  const fundUsageItems = [1, 2, 3, 4, 5, 6]
+    .map((i) => ({
+      label: content[`fund_usage.item${i}_label`] || "",
+      description: content[`fund_usage.item${i}_description`] || "",
+    }))
+    .filter((item) => item.label)
+    .slice(0, 4);
 
   const raisedCents = data.getPlayerRaisedCents(donations, player.id);
   const teamRaisedCents = data.getTeamRaisedCents(teamDonations);
@@ -91,12 +100,12 @@ export default async function PlayerPage({
           </div>
 
           <div className="bg-rampage-charcoal metal-border rounded-2xl p-6">
-            <h2 className="font-display text-xl text-white mb-4">WHAT YOUR DONATION SUPPORTS</h2>
+            <h2 className="font-display text-xl text-white mb-4">{c("player_page.supports_heading", "WHAT YOUR DONATION SUPPORTS")}</h2>
             <div className="grid sm:grid-cols-2 gap-4">
-              {brand.fundUsage.slice(0, 4).map((item) => (
+              {fundUsageItems.map((item) => (
                 <div key={item.label}>
                   <p className="font-semibold text-white text-sm">{item.label}</p>
-                  <p className="text-xs text-rampage-gray">{item.description}</p>
+                  {item.description && <p className="text-xs text-rampage-gray">{item.description}</p>}
                 </div>
               ))}
             </div>
@@ -104,7 +113,7 @@ export default async function PlayerPage({
 
           {fundraiser.recent_supporters_visible && (
             <div className="bg-rampage-charcoal metal-border rounded-2xl p-6">
-              <h2 className="font-display text-xl text-white mb-4">RECENT SUPPORTERS</h2>
+              <h2 className="font-display text-xl text-white mb-4">{c("player_page.recent_supporters_heading", "RECENT SUPPORTERS")}</h2>
               {recentDonations.length === 0 ? (
                 <p className="text-sm text-rampage-gray">Be the first to support {player.display_name} this season!</p>
               ) : (
@@ -138,7 +147,7 @@ export default async function PlayerPage({
 
         <div>
           <div className="sticky top-24 bg-rampage-charcoal metal-border rounded-2xl p-6">
-            <h2 className="font-display text-xl text-white mb-1">DONATE NOW</h2>
+            <h2 className="font-display text-xl text-white mb-1">{c("player_page.donate_heading", "DONATE NOW")}</h2>
             <p className="text-xs text-rampage-gray mb-5">
               This is a prototype — donations here are simulated and no real money is collected.
             </p>

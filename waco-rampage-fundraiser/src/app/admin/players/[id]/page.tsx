@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { requireAdmin } from "@/lib/adminAuth";
 import * as data from "@/lib/data";
 import PlayerForm from "@/components/admin/PlayerForm";
@@ -14,7 +15,7 @@ export default async function EditPlayerPage({
   searchParams,
 }: {
   params: { id: string };
-  searchParams: { error?: string };
+  searchParams: { error?: string; success?: string };
 }) {
   await requireAdmin(["owner", "manager"]);
 
@@ -34,13 +35,24 @@ export default async function EditPlayerPage({
       {searchParams.error === "duplicate-slug" && (
         <p className="text-sm rounded-lg bg-red-50 border border-red-200 text-red-700 p-3">That slug is already in use by another player.</p>
       )}
+      {(searchParams.error === "upload-failed" || searchParams.error === "upload-save-failed") && (
+        <p className="text-sm rounded-lg bg-red-50 border border-red-200 text-red-700 p-3">Photo upload failed. Check the file and try again.</p>
+      )}
+      {searchParams.success === "updated" && (
+        <p className="text-sm rounded-lg bg-green-50 border border-green-200 text-green-700 p-3">Saved.</p>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <PlayerForm action={updatePlayerAction} player={player} fundraiserId={player.fundraiser_id} submitLabel="Save Changes" />
 
         <div className="space-y-6">
           <div className="bg-white rounded-2xl border border-black/5 shadow-card-light p-5 space-y-3">
-            <p className="text-xs uppercase tracking-wide text-rampage-gray font-semibold">Upload real photo</p>
+            <p className="text-xs uppercase tracking-wide text-rampage-gray font-semibold">Photo</p>
+            {player.image_url && (
+              <div className="relative h-32 w-32 rounded-xl overflow-hidden border border-black/10">
+                <Image src={player.image_url} alt={`${player.display_name} photo`} fill className="object-cover" unoptimized />
+              </div>
+            )}
             <form action={uploadImage} className="space-y-2">
               <input type="hidden" name="target" value="player" />
               <input type="hidden" name="relatedId" value={player.id} />
@@ -50,6 +62,7 @@ export default async function EditPlayerPage({
                 Upload Photo
               </button>
             </form>
+            <p className="text-xs text-rampage-gray">Uploads straight to Supabase Storage and updates this player automatically.</p>
           </div>
 
           <div className="bg-white rounded-2xl border border-black/5 shadow-card-light p-5 space-y-3">
