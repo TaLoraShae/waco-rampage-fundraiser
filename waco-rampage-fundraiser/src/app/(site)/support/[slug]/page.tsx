@@ -11,6 +11,16 @@ import ShareButton from "@/components/ShareButton";
 import QrCodeBox from "@/components/QrCodeBox";
 import { getPaymentMode, isMockMode } from "@/lib/payment-mode";
 
+// Single shared fallback for the "What your donation supports" section
+// on every player page. Used only when the fundraiser-wide
+// site_content "fund_usage" section hasn't been filled in yet in
+// Supabase — never entered or stored per player.
+const DEFAULT_FUND_USAGE = [
+  { label: "Tournament Fees", description: "Helps cover tournament entry fees throughout the season." },
+  { label: "Travel Expenses", description: "Supports transportation, lodging, and other team travel needs." },
+  { label: "Uniforms & Equipment", description: "Helps provide uniforms, training tools, and baseball equipment." },
+];
+
 export default async function PlayerPage({
   params,
   searchParams,
@@ -51,13 +61,23 @@ export default async function PlayerPage({
   const contentItems = await data.getSiteContent(fundraiser.id);
   const content = data.contentMap(contentItems);
   const c = (key: string, fallback: string) => content[key] || fallback;
-  const fundUsageItems = [1, 2, 3, 4, 5, 6]
+
+  // "What your donation supports" is the SAME for every player on
+  // every player page — it's fundraiser-wide content, never entered
+  // per player. It's read from the shared site_content "fund_usage"
+  // section (fundraiser-wide, not tied to any single player) when
+  // that's been filled in; if it hasn't, DEFAULT_FUND_USAGE below is
+  // the one shared fallback used for every player instead of ever
+  // showing an empty section. No player record is read, created, or
+  // changed by this.
+  const contentFundUsageItems = [1, 2, 3, 4, 5, 6]
     .map((i) => ({
       label: content[`fund_usage.item${i}_label`] || "",
       description: content[`fund_usage.item${i}_description`] || "",
     }))
     .filter((item) => item.label)
     .slice(0, 4);
+  const fundUsageItems = contentFundUsageItems.length > 0 ? contentFundUsageItems : DEFAULT_FUND_USAGE;
 
   const raisedCents = data.getPlayerRaisedCents(donations, player.id);
   const teamRaisedCents = data.getTeamRaisedCents(teamDonations);
