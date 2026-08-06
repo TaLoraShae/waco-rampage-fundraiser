@@ -23,8 +23,9 @@ export default function QrCodeBox({
     setLoading(true);
     try {
       const generated = await QRCode.toDataURL(url, {
-        margin: 2,
-        width: 480,
+        margin: 4,
+        width: 640,
+        errorCorrectionLevel: "Q",
         color: { dark: "#1E0E30", light: "#FFFFFF" },
       });
       setDataUrl(generated);

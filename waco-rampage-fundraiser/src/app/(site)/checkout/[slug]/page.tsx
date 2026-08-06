@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import * as data from "@/lib/data";
 import { formatCents } from "@/lib/fees";
 import { isMockMode } from "@/lib/payment-mode";
@@ -18,6 +18,16 @@ export default async function CheckoutPage({
     result?: string;
   };
 }) {
+  // This page only ever exists for the simulated/mock donation flow —
+  // real Stripe payments go through Stripe's own hosted Checkout page
+  // instead (see /api/checkout/session). If PAYMENT_MODE=stripe, this
+  // route has nothing valid to show, so send visitors back to the
+  // player's real donate page rather than exposing simulated-checkout
+  // wording on a live fundraiser.
+  if (!isMockMode()) {
+    redirect(`/support/${params.slug}`);
+  }
+
   const player = await data.getPlayerBySlug(params.slug);
   if (!player) notFound();
   const settings = await data.getSiteSettings(player.fundraiser_id);

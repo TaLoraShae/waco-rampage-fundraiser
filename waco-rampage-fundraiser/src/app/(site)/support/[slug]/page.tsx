@@ -9,7 +9,7 @@ import DonateForm from "@/components/DonateForm";
 import CopyLinkButton from "@/components/CopyLinkButton";
 import ShareButton from "@/components/ShareButton";
 import QrCodeBox from "@/components/QrCodeBox";
-import { getPaymentMode } from "@/lib/payment-mode";
+import { getPaymentMode, isMockMode } from "@/lib/payment-mode";
 
 export default async function PlayerPage({
   params,
@@ -148,9 +148,11 @@ export default async function PlayerPage({
         <div>
           <div className="sticky top-24 bg-rampage-charcoal metal-border rounded-2xl p-6">
             <h2 className="font-display text-xl text-white mb-1">{c("player_page.donate_heading", "DONATE NOW")}</h2>
-            <p className="text-xs text-rampage-gray mb-5">
-              This is a prototype — donations here are simulated and no real money is collected.
-            </p>
+            {isMockMode() && (
+              <p className="text-xs text-rampage-gray mb-5">
+                This is a prototype — donations here are simulated and no real money is collected.
+              </p>
+            )}
             {searchParams.canceled && (
               <p className="mb-4 text-sm rounded-lg bg-white/5 border border-white/20 text-white/80 p-3">
                 Your donation was canceled. No charge was made — feel free to try again below.
